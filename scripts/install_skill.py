@@ -39,12 +39,13 @@ def parse_github_url(url: str) -> Optional[dict]:
     Parse a GitHub tree URL into components.
     
     Input:  https://github.com/{owner}/{repo}/tree/{branch}/{path}
+            https://github.com/{owner}/{repo}/tree/{branch}  (root level)
     Output: {"owner": ..., "repo": ..., "branch": ..., "path": ...}
     
     Returns None if URL is not a valid GitHub tree URL.
     """
-    # Pattern: github.com/{owner}/{repo}/tree/{branch}/{path...}
-    pattern = r'https?://github\.com/([^/]+)/([^/]+)/tree/([^/]+)/(.+?)/?$'
+    # Pattern: github.com/{owner}/{repo}/tree/{branch}/{path...} (path optional)
+    pattern = r'https?://github\.com/([^/]+)/([^/]+)/tree/([^/]+)(?:/(.+?))?/?$'
     match = re.match(pattern, url)
     
     if not match:
@@ -54,18 +55,28 @@ def parse_github_url(url: str) -> Optional[dict]:
         "owner": match.group(1),
         "repo": match.group(2),
         "branch": match.group(3),
-        "path": match.group(4),
+        "path": match.group(4) or "",  # Empty string if at root
     }
 
 
 def to_raw_url(owner: str, repo: str, branch: str, path: str, filename: str) -> str:
     """Convert GitHub components to raw.githubusercontent.com URL."""
-    return f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{path}/{filename}"
+    # URL-encode the filename to handle spaces and special characters
+    from urllib.parse import quote
+    encoded_filename = quote(filename, safe='')
+    if path:
+        encoded_path = '/'.join(quote(p, safe='') for p in path.split('/'))
+        return f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{encoded_path}/{encoded_filename}"
+    else:
+        return f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{encoded_filename}"
 
 
 def to_api_url(owner: str, repo: str, branch: str, path: str) -> str:
     """Convert GitHub components to API contents URL."""
-    return f"https://api.github.com/repos/{owner}/{repo}/contents/{path}?ref={branch}"
+    if path:
+        return f"https://api.github.com/repos/{owner}/{repo}/contents/{path}?ref={branch}"
+    else:
+        return f"https://api.github.com/repos/{owner}/{repo}/contents?ref={branch}"
 
 
 # =============================================================================
