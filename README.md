@@ -15,6 +15,21 @@
 
 A centralized skill manager for AI coding assistants. Discovers, installs, and synchronizes skills from [SkillsMP.com](https://skillsmp.com) across multiple AI tools including Claude Code, OpenAI Codex, Gemini CLI, and more.
 
+## Demo
+
+<p align="center">
+  <a href="https://youtu.be/PnOD9pJCk1U">
+    <img src="https://img.youtube.com/vi/PnOD9pJCk1U/0.jpg" alt="Universal Skill Manager Demo" width="100%">
+  </a>
+</p>
+
+This video covers:
+- Installation
+- Searching for a skill
+- Installing a skill
+- Generating a skill report
+- Synchronizing skills among multiple tools
+
 ## Features
 
 - 🔍 **Search & Discover**: Find skills using keyword or AI semantic search via SkillsMP API
