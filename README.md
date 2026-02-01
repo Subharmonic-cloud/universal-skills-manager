@@ -1,7 +1,7 @@
 # Universal Skills(mp) Manager
 
 <p align="center">
-  <img src="assets/mascot.png" alt="Universal Skills(mp) Manager" width="100%">
+  <img src="assets/mascot.jpeg" alt="Universal Skills(mp) Manager" width="100%">
 </p>
 
 <p align="center">
