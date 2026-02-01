@@ -141,6 +141,7 @@ This skill manages the following tools and scopes. Always verify these paths exi
     ls -d ~/.claude/skills 2>/dev/null && echo "Claude: ✓"
     ls -d ~/.codex/skills 2>/dev/null && echo "Codex: ✓"
     ls -d ~/.gemini/skills 2>/dev/null && echo "Gemini: ✓"
+    ls -d ~/.gemini/antigravity/skills 2>/dev/null && echo "Antigravity: ✓"
     ls -d ~/.continue/prompts 2>/dev/null && echo "Continue: ✓"
     ls -d ~/.cursor/skills 2>/dev/null && echo "Cursor: ✓"
     ls -d ~/.opencode/skills 2>/dev/null && echo "OpenCode: ✓"
@@ -150,7 +151,7 @@ This skill manages the following tools and scopes. Always verify these paths exi
 2.  **Collect All Skills:**
     For each detected tool, list skill folders:
     ```bash
-    find ~/.{claude,codex,gemini}/skills -maxdepth 1 -type d 2>/dev/null | \
+    find ~/.{claude,codex,gemini,gemini/antigravity}/skills -maxdepth 1 -type d 2>/dev/null | \
       xargs -I{} basename {} | sort -u
     ```
 
