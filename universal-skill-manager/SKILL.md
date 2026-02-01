@@ -130,6 +130,50 @@ This skill manages the following tools and scopes. Always verify these paths exi
     -   After displaying results, ask: "Which skill would you like to install?"
     -   Note the skill's `githubUrl` for content fetching
 
+### 4. Skill Matrix Report
+**Trigger:** User asks for skill report/overview (e.g., "Show my skills", "What skills do I have?", "Skill report", "Compare my tools").
+
+**Procedure:**
+1.  **Detect Installed Tools:**
+    Check which AI tools are installed by verifying their user-level skills directories exist:
+    ```bash
+    # Check each tool's skills directory
+    ls -d ~/.claude/skills 2>/dev/null && echo "Claude: ✓"
+    ls -d ~/.codex/skills 2>/dev/null && echo "Codex: ✓"
+    ls -d ~/.gemini/skills 2>/dev/null && echo "Gemini: ✓"
+    ls -d ~/.continue/prompts 2>/dev/null && echo "Continue: ✓"
+    ls -d ~/.cursor/skills 2>/dev/null && echo "Cursor: ✓"
+    ls -d ~/.opencode/skills 2>/dev/null && echo "OpenCode: ✓"
+    ls -d ~/.roo/skills 2>/dev/null && echo "Roo: ✓"
+    ```
+
+2.  **Collect All Skills:**
+    For each detected tool, list skill folders:
+    ```bash
+    find ~/.{claude,codex,gemini}/skills -maxdepth 1 -type d 2>/dev/null | \
+      xargs -I{} basename {} | sort -u
+    ```
+
+3.  **Generate Matrix Table:**
+    Create a markdown table where:
+    - **Rows** = skill names (deduplicated across all tools)
+    - **Columns** = only tools that are installed on the system
+    - **Cells** = ✅ (installed) or ❌ (not installed)
+
+    Example output:
+    ```
+    | Skill | Claude | Codex | Gemini |
+    |-------|--------|-------|--------|
+    | humanizer | ✅ | ❌ | ✅ |
+    | skill-creator | ❌ | ✅ | ❌ |
+    | using-superpowers | ✅ | ✅ | ✅ |
+    ```
+
+4.  **Show Summary:**
+    - Total skills across all tools
+    - Skills unique to one tool
+    - Skills installed everywhere
+
 ## Operational Rules
 
 1.  **Structure Integrity:** When installing, always ensure the skill has its own folder (e.g., `.../skills/my-skill/`). Do not dump loose files into the root skills directory.

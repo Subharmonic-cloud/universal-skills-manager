@@ -1,14 +1,29 @@
-# Universal Skill Manager
+# Universal Skills(mp) Manager
 
-A centralized skill manager for AI coding assistants. Discovers, installs, and synchronizes skills from [SkillsMP.com](https://skillsmp.com) across multiple AI tools including Claude Code, Cursor, Continue, Gemini CLI, and more.
+<p align="center">
+  <img src="assets/mascot.png" alt="Universal Skill Manager Mascot" width="300">
+</p>
+
+<p align="center">
+  <strong>Your AI skill orchestrator — Search, Install, Sync, Discover, Report</strong>
+</p>
+
+<p align="center">
+  <a href="https://skillsmp.com">Powered by SkillsMP.com</a>
+</p>
+
+---
+
+A centralized skill manager for AI coding assistants. Discovers, installs, and synchronizes skills from [SkillsMP.com](https://skillsmp.com) across multiple AI tools including Claude Code, OpenAI Codex, Gemini CLI, and more.
 
 ## Features
 
-- 🔍 **Smart Discovery**: Search for skills using keyword or AI semantic search
-- 📦 **Easy Installation**: Install skills from SkillsMP.com with a single command
-- 🔄 **Cross-Tool Sync**: Automatically sync skills across all your AI tools
-- 🌍 **Dual Scope**: Install globally (user-level) or locally (project-level)
-- ⭐ **Community Curated**: Access thousands of skills from the SkillsMP community
+- 🔍 **Search & Discover**: Find skills using keyword or AI semantic search via SkillsMP API
+- 📦 **One-Click Install**: Download and validate skills with atomic installation (temp → validate → install)
+- 🔄 **Cross-Tool Sync**: Automatically sync skills across all your installed AI tools
+- 📊 **Skill Matrix Report**: See which skills are installed on which tools at a glance
+- ✅ **Multi-File Validation**: Validates `.py`, `.sh`, `.json`, `.yaml` files during install
+- 🌍 **Global Installation**: User-level skills available across all projects
 
 ## Installation
 
@@ -49,6 +64,42 @@ cp -r universal-skill-manager ./.continue/prompts/
 ### Other AI Tools
 
 See the [Supported Tools](#supported-tools) section for paths to other AI coding assistants.
+
+## Quick Start
+
+Once installed, just ask your AI assistant:
+
+```
+"Find a debugging skill"
+"Install the humanizer skill to my Claude"
+"Show me my skill report"
+"Sync skills across all my tools"
+```
+
+### Using the Install Script
+
+The skill includes a Python helper script for downloading skills from GitHub:
+
+```bash
+# Preview what would be downloaded (dry-run)
+python3 ~/.claude/skills/universal-skill-manager/scripts/install_skill.py \
+  --url "https://github.com/user/repo/tree/main/skill-folder" \
+  --dest "~/.claude/skills/my-skill" \
+  --dry-run
+
+# Actually install
+python3 ~/.claude/skills/universal-skill-manager/scripts/install_skill.py \
+  --url "https://github.com/user/repo/tree/main/skill-folder" \
+  --dest "~/.claude/skills/my-skill" \
+  --force
+```
+
+**Script features:**
+- Zero dependencies (Python 3 stdlib only)
+- Atomic install (downloads to temp, validates, then moves)
+- Validates `.py`, `.sh`, `.json`, `.yaml` files
+- Supports subdirectories and nested files
+- Creates backups before overwriting
 
 ## Configuration
 
