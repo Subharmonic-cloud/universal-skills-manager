@@ -26,6 +26,7 @@ import sys
 import tempfile
 import urllib.error
 import urllib.request
+import hashlib
 from pathlib import Path
 from typing import Optional
 
@@ -334,43 +335,156 @@ def validate_all_files(directory: Path, verbose: bool = False) -> tuple[bool, li
 
 
 # =============================================================================
+# Safety Checks
+# =============================================================================
+
+def check_root_skills_directory_safety(dest: Path, force: bool) -> None:
+    """
+    Abort if destination looks like a root skills directory.
+    
+    Root skills directory = has subdirs with SKILL.md but no SKILL.md itself.
+    Fresh/empty directories are allowed.
+    """
+    if not dest.exists() or not dest.is_dir() or force:
+        return  # Safe to proceed
+    
+    has_skill_md = (dest / "SKILL.md").exists()
+    if has_skill_md:
+        return  # This IS a skill, safe to update
+    
+    # Check for subdirectories containing SKILL.md (installed skills)
+    installed_skills = [
+        d.name for d in dest.iterdir() 
+        if d.is_dir() and (d / "SKILL.md").exists()
+    ]
+    
+    if installed_skills:
+        # DANGER: This is a root skills directory!
+        print("=" * 60, file=sys.stderr)
+        print("CRITICAL ERROR: Root Skills Directory Detected", file=sys.stderr)
+        print("=" * 60, file=sys.stderr)
+        print(f"\nDestination: {dest}", file=sys.stderr)
+        print(f"\nThis appears to be a root skills directory containing:", file=sys.stderr)
+        for skill in installed_skills[:5]:
+            print(f"  • {skill}", file=sys.stderr)
+        if len(installed_skills) > 5:
+            print(f"  ... and {len(installed_skills) - 5} more", file=sys.stderr)
+        print(f"\nYou probably meant: {dest}/<skill-name>", file=sys.stderr)
+        print("\nUse --force to override this safety check.", file=sys.stderr)
+        sys.exit(4)
+
+
+def file_hash(file_path: Path) -> str:
+    """Calculate MD5 hash of a file for comparison."""
+    hasher = hashlib.md5()
+    with open(file_path, 'rb') as f:
+        for chunk in iter(lambda: f.read(8192), b''):
+            hasher.update(chunk)
+    return hasher.hexdigest()
+
+
+def compare_skill_directories(new_dir: Path, existing_dir: Path) -> dict:
+    """
+    Compare two skill directories and return differences.
+    
+    Returns:
+        {
+            "identical": bool,
+            "added": [list of new files],
+            "removed": [list of deleted files],
+            "modified": [list of changed files],
+        }
+    """
+    def get_relative_files(base: Path) -> dict:
+        """Get all files relative to base with their hashes."""
+        files = {}
+        for file_path in base.rglob('*'):
+            if file_path.is_file():
+                rel_path = str(file_path.relative_to(base))
+                files[rel_path] = file_hash(file_path)
+        return files
+    
+    new_files = get_relative_files(new_dir)
+    existing_files = get_relative_files(existing_dir)
+    
+    new_set = set(new_files.keys())
+    existing_set = set(existing_files.keys())
+    
+    added = sorted(new_set - existing_set)
+    removed = sorted(existing_set - new_set)
+    
+    # Check for modified files (same name, different hash)
+    common = new_set & existing_set
+    modified = sorted([f for f in common if new_files[f] != existing_files[f]])
+    
+    identical = len(added) == 0 and len(removed) == 0 and len(modified) == 0
+    
+    return {
+        "identical": identical,
+        "added": added,
+        "removed": removed,
+        "modified": modified,
+    }
+
+
+def display_skill_diff(diff: dict, dest: Path, force: bool) -> bool:
+    """
+    Display diff and prompt user for confirmation.
+    
+    Returns True if user approves (or force=True), False otherwise.
+    """
+    if diff["identical"]:
+        print(f"\n✓ Skill is already up to date: {dest}")
+        return False  # No need to reinstall
+    
+    print(f"\n📋 Changes detected for skill at: {dest}")
+    print("-" * 50)
+    
+    if diff["added"]:
+        print(f"\n  ➕ New files ({len(diff['added'])}):", )
+        for f in diff["added"][:10]:
+            print(f"      {f}")
+        if len(diff["added"]) > 10:
+            print(f"      ... and {len(diff['added']) - 10} more")
+    
+    if diff["removed"]:
+        print(f"\n  ➖ Removed files ({len(diff['removed'])}):", )
+        for f in diff["removed"][:10]:
+            print(f"      {f}")
+        if len(diff["removed"]) > 10:
+            print(f"      ... and {len(diff['removed']) - 10} more")
+    
+    if diff["modified"]:
+        print(f"\n  📝 Modified files ({len(diff['modified'])}):", )
+        for f in diff["modified"][:10]:
+            print(f"      {f}")
+        if len(diff["modified"]) > 10:
+            print(f"      ... and {len(diff['modified']) - 10} more")
+    
+    print("-" * 50)
+    
+    if force:
+        print("  (--force specified, proceeding without prompt)")
+        return True
+    
+    response = input("\nProceed with update? [y/N]: ")
+    return response.lower() == 'y'
+
+
+# =============================================================================
 # Installation
 # =============================================================================
 
-def backup_existing(dest: Path, verbose: bool = False) -> Optional[Path]:
-    """Create backup of existing directory. Returns backup path."""
-    if not dest.exists():
-        return None
-    
-    backup_path = dest.with_suffix('.bak')
-    
-    # Remove old backup if exists
-    if backup_path.exists():
-        shutil.rmtree(backup_path)
-    
-    # Move current to backup
-    shutil.move(str(dest), str(backup_path))
-    
-    if verbose:
-        print(f"  Backed up existing skill to: {backup_path}")
-    
-    return backup_path
-
-
-def install_skill(temp_dir: Path, dest: Path, no_backup: bool = False, 
-                  verbose: bool = False) -> None:
-    """Move validated skill from temp to destination."""
+def install_skill(temp_dir: Path, dest: Path) -> None:
+    """Copy validated skill from temp to destination."""
     if dest.exists():
-        if no_backup:
-            shutil.rmtree(dest)
-        else:
-            backup_existing(dest, verbose)
+        shutil.rmtree(dest)
     
     # Ensure parent exists
     dest.parent.mkdir(parents=True, exist_ok=True)
     
-    # Move temp to destination
-    shutil.move(str(temp_dir), str(dest))
+    # Copy from temp to destination
+    shutil.copytree(str(temp_dir), str(dest))
 
 
 # =============================================================================
@@ -402,15 +516,11 @@ Examples:
     )
     parser.add_argument(
         '--force', action='store_true',
-        help='Overwrite existing skill without prompting'
+        help='Overwrite existing skill without prompting and bypass safety checks'
     )
     parser.add_argument(
         '--dry-run', action='store_true',
         help='Show what would be downloaded without actually installing'
-    )
-    parser.add_argument(
-        '--no-backup', action='store_true',
-        help='Skip backup when overwriting existing skill'
     )
     parser.add_argument(
         '--verbose', action='store_true',
@@ -439,12 +549,8 @@ Examples:
     print(f"Path: {parsed['path']}")
     print(f"Destination: {dest}")
     
-    # Check if destination exists and handle --force
-    if dest.exists() and not args.force and not args.dry_run:
-        response = input(f"\nDestination exists: {dest}\nOverwrite? [y/N]: ")
-        if response.lower() != 'y':
-            print("Aborted.")
-            sys.exit(0)
+    # Safety check: Prevent accidental targeting of root skills directory
+    check_root_skills_directory_safety(dest, args.force)
     
     # Dry run mode
     if args.dry_run:
@@ -498,10 +604,21 @@ Examples:
         
         print("  ✓ All files valid")
         
-        # Step 3: Install (move from temp to destination)
+        # Step 3: Compare if destination already exists
+        if dest.exists():
+            diff = compare_skill_directories(temp_path, dest)
+            should_install = display_skill_diff(diff, dest, args.force)
+            if not should_install:
+                if diff["identical"]:
+                    sys.exit(0)  # Already up to date
+                else:
+                    print("Aborted.")
+                    sys.exit(0)
+        
+        # Step 4: Install (copy from temp to destination)
         print(f"\nInstalling to: {dest}")
         try:
-            install_skill(temp_path, dest, args.no_backup, args.verbose)
+            install_skill(temp_path, dest)
         except Exception as e:
             print(f"\nError during installation: {e}", file=sys.stderr)
             sys.exit(3)

@@ -61,7 +61,9 @@ This skill manages the following tools and scopes. Always verify these paths exi
       --dest "{target-path}" \
       --dry-run  # Preview first, then remove flag to install
     ```
-    *   The script handles: atomic install, validation, subdirectories, backups
+    *   The script handles: atomic install, validation, subdirectories, safety checks
+    *   **Safety feature**: Script will abort (exit code 4) if destination is a root skills directory
+    *   **Update detection**: If skill exists, shows diff and prompts for confirmation
 4.  **Determine Primary Target:**
     *   Ask: "Should this be installed Globally (User) or Locally (Project)?"
     *   Determine the primary tool (e.g., if user is in Claude Code, Claude is primary)

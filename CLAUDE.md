@@ -161,7 +161,9 @@ For example, installing "code-debugging" creates:
 ## Important Notes
 
 - **API Key Required**: The `SKILLSMP_API_KEY` environment variable must be set for skill discovery to work. See README.md for configuration instructions.
-- **No overwriting without confirmation**: Always ask before overwriting existing skills unless "Force Sync" is explicitly requested
+- **Root Directory Safety**: The install script will abort with exit code 4 if the destination appears to be a root skills directory (contains skills but no SKILL.md). This prevents accidental data loss.
+- **Update Comparison**: When updating an existing skill, the script compares files and shows a diff before overwriting, prompting for confirmation.
+- **No overwriting without confirmation**: Always ask before overwriting existing skills unless "--force" is explicitly used
 - **Structure integrity**: Never dump loose files into the root skills directory; always create a dedicated folder per skill
 - **Cross-platform compatibility**: Some tools (OpenCode, Anti-Gravity) may require additional manifest files generated from SKILL.md frontmatter
 - **GitHub content fetching**: Skills are fetched from GitHub using raw URLs converted from the tree URLs provided by SkillsMP API

@@ -100,10 +100,11 @@ python3 path/to/install_skill.py \
 
 **Script features:**
 - Zero dependencies (Python 3 stdlib only)
-- Atomic install (downloads to temp, validates, then moves)
+- Atomic install (downloads to temp, validates, then copies to destination)
+- Safety check prevents accidental targeting of root skills directories
+- Compares new vs existing skills before update (shows diff)
 - Validates `.py`, `.sh`, `.json`, `.yaml` files
 - Supports subdirectories and nested files
-- Creates backups before overwriting
 
 ## Configuration
 
