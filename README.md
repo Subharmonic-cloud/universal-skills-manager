@@ -26,53 +26,43 @@ A centralized skill manager for AI coding assistants. Discovers, installs, and s
 
 ## Installation
 
-### Claude Code
+Copy the `universal-skill-manager` folder to your AI tool's skills directory:
 
-1. Clone or copy the `universal-skill-manager` folder to your Claude skills directory:
+| Tool | Global Path |
+|------|-------------|
+| **OpenAI Codex** | `~/.codex/skills/` |
+| **Claude Code** | `~/.claude/skills/` |
+| **Gemini CLI** | `~/.gemini/skills/` |
+| **Cursor** | `~/.cursor/skills/` |
+| **Continue** | `~/.continue/prompts/` |
+| **Roo Code** | `~/.roo/skills/` |
+| **OpenCode** | `~/.opencode/skills/` |
 
-```bash
-# Global installation (recommended)
-cp -r universal-skill-manager ~/.claude/agents/
-
-# Project-level installation
-cp -r universal-skill-manager ./.claude/agents/
-```
-
-2. Restart Claude Code or reload skills
-
-### Cursor
+### Example
 
 ```bash
-# Global installation
-cp -r universal-skill-manager ~/.cursor/extensions/
+# For OpenAI Codex
+cp -r universal-skill-manager ~/.codex/skills/
 
-# Project-level installation
-cp -r universal-skill-manager ./.cursor/extensions/
+# For Claude Code
+cp -r universal-skill-manager ~/.claude/skills/
+
+# For Gemini CLI
+cp -r universal-skill-manager ~/.gemini/skills/
 ```
 
-### Continue
-
-```bash
-# Global installation
-cp -r universal-skill-manager ~/.continue/prompts/
-
-# Project-level installation
-cp -r universal-skill-manager ./.continue/prompts/
-```
-
-### Other AI Tools
-
-See the [Supported Tools](#supported-tools) section for paths to other AI coding assistants.
+Restart your AI assistant after installation.
 
 ## Quick Start
 
 Once installed, just ask your AI assistant:
 
 ```
-"Find a debugging skill"
-"Install the humanizer skill to my Claude"
+"Search for a debugging skill"
+"Install the humanizer skill"
 "Show me my skill report"
-"Sync skills across all my tools"
+"Sync the skill-creator to all my tools"
+"What skills do I have in Codex vs Claude?"
 ```
 
 ### Using the Install Script
@@ -81,15 +71,15 @@ The skill includes a Python helper script for downloading skills from GitHub:
 
 ```bash
 # Preview what would be downloaded (dry-run)
-python3 ~/.claude/skills/universal-skill-manager/scripts/install_skill.py \
+python3 path/to/install_skill.py \
   --url "https://github.com/user/repo/tree/main/skill-folder" \
-  --dest "~/.claude/skills/my-skill" \
+  --dest "~/.codex/skills/my-skill" \
   --dry-run
 
-# Actually install
-python3 ~/.claude/skills/universal-skill-manager/scripts/install_skill.py \
+# Actually install to your preferred tool
+python3 path/to/install_skill.py \
   --url "https://github.com/user/repo/tree/main/skill-folder" \
-  --dest "~/.claude/skills/my-skill" \
+  --dest "~/.gemini/skills/my-skill" \
   --force
 ```
 
