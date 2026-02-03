@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-02-03
+
+### Added
+- Cloud upload packaging capability for claude.ai and Claude Desktop
+- Hybrid API key discovery (environment variable → config file → runtime prompt)
+- `config.json` template for embedded API key storage
+- Documentation for cloud platform installation
+
+### Changed
+- Updated API key discovery logic to support multiple sources
+- Expanded supported platforms to include claude.ai and Claude Desktop
+
 ## [1.0.0] - 2026-02-01
 
 ### Added
