@@ -44,6 +44,20 @@ This skill manages the following tools and scopes. Always verify these paths exi
 
 *Note: claude.ai and Claude Desktop don't have access to local environment variables. Use the "Package for claude.ai/Desktop" capability (Section 5) to embed your API key in the ZIP.*
 
+**IMPORTANT - Universal Skill Manager Platform Limitations:**
+
+This skill (Universal Skill Manager) requires network access to call the SkillsMP API and GitHub. Handle these scenarios:
+
+- **If user asks to package/ZIP the Universal Skill Manager itself for claude.ai:**
+  Tell the user: "The Universal Skill Manager won't work on claude.ai because it requires network access to call the SkillsMP API and GitHub APIs. claude.ai's code execution environment doesn't allow outbound network requests. However, I can package OTHER skills for claude.ai upload - those will work as long as they don't require network access."
+
+- **If user wants to try the Universal Skill Manager on Claude Desktop with Coworker:**
+  Tell the user: "Claude Desktop with Coworker has network access capabilities. To use the Universal Skill Manager there, you may need to extend network access to these domains in your Cowork settings:
+  - `skillsmp.com` (for skill searches)
+  - `api.github.com` and `raw.githubusercontent.com` (for skill downloads)
+  
+  This is experimental - Cowork's default network access is restricted. Check your Cowork network egress settings."
+
 *(Note: If a tool uses a different directory structure, ask the user to confirm the path, then remember it using `save_memory`.)*
 
 ## Core Capabilities
