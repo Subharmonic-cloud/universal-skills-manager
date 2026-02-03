@@ -11,6 +11,7 @@ The skill enables:
 - **Installation**: Installing skills from GitHub to User-level (global) or Project-level (local) scopes
 - **Synchronization**: Copying/syncing skills across different AI tools
 - **Consistency**: Maintaining version consistency across installed locations
+- **Cloud Packaging**: Creating ready-to-upload ZIP files for claude.ai/Claude Desktop with embedded API keys
 
 ## Architecture
 
@@ -51,6 +52,18 @@ The skill manages skills across these AI tools and their respective paths:
 | block/goose | `~/.goose/agents/` | `./.goose/agents/` |
 | Roo Code | `~/.roo/skills/` | `./.roo/skills/` |
 | Cursor | `~/.cursor/extensions/` | `./.cursor/extensions/` |
+
+### Cloud Platform Support
+
+For claude.ai and Claude Desktop, skills must be uploaded as ZIP files through the web UI. The skill includes a "Package for Cloud Upload" capability that:
+1. Prompts user for their SkillsMP API key
+2. Creates `config.json` with the embedded key
+3. Generates a ZIP file ready for upload
+
+The hybrid API key discovery checks:
+1. `$SKILLSMP_API_KEY` environment variable (Claude Code)
+2. `config.json` in skill directory (cloud platforms)
+3. Runtime prompt as fallback (all platforms)
 
 ## Key Concepts
 
