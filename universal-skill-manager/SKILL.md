@@ -186,6 +186,82 @@ This skill manages the following tools and scopes. Always verify these paths exi
     - Skills unique to one tool
     - Skills installed everywhere
 
+### 5. Package for Cloud Upload
+
+**Trigger:** User wants to use this skill in claude.ai or Claude Desktop (e.g., "Package this for claude.ai", "Create a ZIP for Claude Desktop", "I want to upload this skill to claude.ai", "Prepare skill for web upload").
+
+**Procedure:**
+1.  **Explain the Process:**
+    "I'll create a ZIP file with this skill ready for upload to claude.ai or Claude Desktop. Since cloud environments don't have access to your local environment variables, I'll embed your API key in the package."
+
+2.  **Collect API Key:**
+    *   Ask: "Please provide your SkillsMP API key. You can get one at https://skillsmp.com"
+    *   Wait for user to provide the key
+    *   **Security:** Do not echo or display the key back to the user
+
+3.  **Create Package Contents:**
+    *   Create a temporary directory structure:
+        ```
+        universal-skill-manager/
+        ├── SKILL.md          # Copy from current skill
+        ├── config.json       # Create with embedded API key
+        └── scripts/
+            └── install_skill.py  # Copy from current skill
+        ```
+    *   Generate `config.json` with the user's API key:
+        ```json
+        {
+          "skillsmp_api_key": "USER_PROVIDED_KEY_HERE"
+        }
+        ```
+
+4.  **Create ZIP File:**
+    *   Use Python to create the ZIP:
+        ```python
+        import zipfile
+        import json
+        import tempfile
+        from pathlib import Path
+        
+        # Create ZIP in user's Downloads or current directory
+        zip_path = Path.home() / "Downloads" / "universal-skill-manager.zip"
+        skill_dir = Path("~/.claude/skills/universal-skill-manager").expanduser()
+        
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            
+            # Copy skill files
+            for file_path in skill_dir.rglob('*'):
+                if file_path.is_file() and file_path.name != 'config.json':
+                    rel_path = file_path.relative_to(skill_dir)
+                    dest = temp_path / rel_path
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    dest.write_bytes(file_path.read_bytes())
+            
+            # Create config.json with API key
+            config = {"skillsmp_api_key": "USER_API_KEY"}
+            (temp_path / "config.json").write_text(json.dumps(config, indent=2))
+            
+            # Create ZIP
+            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+                for file_path in temp_path.rglob('*'):
+                    if file_path.is_file():
+                        arcname = f"universal-skill-manager/{file_path.relative_to(temp_path)}"
+                        zf.write(file_path, arcname)
+        ```
+    *   Alternatively, provide the ZIP as a downloadable artifact
+
+5.  **Provide Upload Instructions:**
+    *   "Your skill package is ready! To use it:"
+    *   "1. Download the ZIP file: `universal-skill-manager.zip`"
+    *   "2. Go to claude.ai → Settings → Capabilities"
+    *   "3. Scroll to Skills section and click 'Upload skill'"
+    *   "4. Select the ZIP file and upload"
+    *   "5. Enable the skill and start using it!"
+
+6.  **Security Reminder:**
+    *   "Note: This ZIP contains your API key. Do not share it publicly or commit it to version control."
+
 ## Operational Rules
 
 1.  **Structure Integrity:** When installing, always ensure the skill has its own folder (e.g., `.../skills/my-skill/`). Do not dump loose files into the root skills directory.
