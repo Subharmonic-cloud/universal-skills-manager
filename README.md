@@ -38,6 +38,7 @@ This video covers:
 - 📊 **Skill Matrix Report**: See which skills are installed on which tools at a glance
 - ✅ **Multi-File Validation**: Validates `.py`, `.sh`, `.json`, `.yaml` files during install
 - 🌍 **Global Installation**: User-level skills available across all projects
+- ☁️ **Cloud Upload Packaging**: Create ready-to-upload ZIP files for claude.ai/Claude Desktop
 
 ## Installation
 
@@ -278,6 +279,46 @@ The AI will:
 | **OpenAI Codex** | `~/.codex/skills/` | `./.codex/skills/` |
 | **block/goose** | `~/.config/goose/skills/` | `./.goose/agents/` |
 | **Roo Code** | `~/.roo/skills/` | `./.roo/skills/` |
+
+## Cloud Platform Support
+
+### claude.ai and Claude Desktop
+
+For use in claude.ai or Claude Desktop (web-based environments), the skill requires special packaging since environment variables are not available.
+
+**Option 1: On-Demand Packaging (Recommended)**
+
+If you have the skill installed in Claude Code, simply ask:
+
+```
+"Package this skill for claude.ai"
+"Create a ZIP for Claude Desktop"
+```
+
+The AI will:
+1. Ask for your SkillsMP API key
+2. Create a ZIP file with your key embedded
+3. Provide upload instructions
+
+**Option 2: Manual Packaging**
+
+1. Copy the skill folder and create `config.json`:
+   ```bash
+   cp -r universal-skill-manager /tmp/
+   echo '{"skillsmp_api_key": "YOUR_KEY_HERE"}' > /tmp/universal-skill-manager/config.json
+   ```
+
+2. Create ZIP:
+   ```bash
+   cd /tmp && zip -r universal-skill-manager.zip universal-skill-manager/
+   ```
+
+3. Upload to claude.ai:
+   - Go to Settings → Capabilities
+   - Click "Upload skill" in the Skills section
+   - Select your ZIP file
+
+**Security Note:** The packaged ZIP contains your API key. Do not share it publicly or commit it to version control.
 
 ## API Reference
 
