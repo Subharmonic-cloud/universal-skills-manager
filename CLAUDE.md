@@ -46,10 +46,10 @@ The skill manages skills across these AI tools and their respective paths:
 | Gemini CLI | `~/.gemini/skills/` | `./.gemini/skills/` |
 | Google Anti-Gravity | `~/.gemini/antigravity/skills/` | `./.antigravity/extensions/` |
 | OpenCode | `~/.config/opencode/skills/` | `./.opencode/skills/` |
+| OpenClaw | `~/.openclaw/workspace/skills/` | `./.openclaw/skills/` |
 | Claude Code | `~/.claude/skills/` | `./.claude/skills/` |
 | OpenAI Codex | `~/.codex/skills/` | `./.codex/skills/` |
-
-| block/goose | `~/.goose/agents/` | `./.goose/agents/` |
+| block/goose | `~/.config/goose/skills/` | `./.goose/agents/` |
 | Roo Code | `~/.roo/skills/` | `./.roo/skills/` |
 | Cursor | `~/.cursor/extensions/` | `./.cursor/extensions/` |
 
@@ -62,7 +62,7 @@ For claude.ai and Claude Desktop, skills must be uploaded as ZIP files through t
 
 The hybrid API key discovery checks:
 1. `$SKILLSMP_API_KEY` environment variable (Claude Code)
-2. `config.json` in skill directory (cloud platforms)
+2. `config.json` in skill directory (claude.ai/Claude Desktop)
 3. Runtime prompt as fallback (all platforms)
 
 ## Key Concepts

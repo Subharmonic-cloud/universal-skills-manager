@@ -58,7 +58,7 @@ Copy the `universal-skill-manager` folder to your tool's skills directory:
 | **OpenAI Codex** | `~/.codex/skills/` |
 | **Claude Code** | `~/.claude/skills/` |
 | **Gemini CLI** | `~/.gemini/skills/` |
-| **Google Antigravity** | `~/.gemini/antigravity/skills/` |
+| **Google Anti-Gravity** | `~/.gemini/antigravity/skills/` |
 | **Cursor** | `~/.cursor/extensions/` |
 | **Roo Code** | `~/.roo/skills/` |
 | **OpenCode** | `~/.config/opencode/skills/` |

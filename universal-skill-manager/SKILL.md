@@ -1,6 +1,6 @@
 ---
 name: universal-skill-manager
-version: 1.1.0
+version: 1.0.1
 description: The master coordinator for AI skills. Discovers skills from SkillsMP.com, manages installation, and synchronization across Claude Code, Gemini CLI, Google Anti-Gravity, OpenCode, and other AI tools. Handles User-level (Global) and Project-level (Local) scopes.
 ---
 
@@ -139,13 +139,13 @@ This skill manages the following tools and scopes. Always verify these paths exi
     -   **AI Search Response:** Extract from `data.data[]` array, check for `skill` object
     -   Available fields: `id`, `name`, `author`, `description`, `githubUrl`, `skillUrl`, `stars`, `updatedAt`
 
-4.  **Display Results:**
+5.  **Display Results:**
     -   Show skill name, author, stars, and description
     -   Include GitHub URL for reference
     -   For AI search: Show relevance score
     -   Limit to top 10-15 results for readability
 
-5.  **Offer Installation:**
+6.  **Offer Installation:**
     -   After displaying results, ask: "Which skill would you like to install?"
     -   Note the skill's `githubUrl` for content fetching
 
