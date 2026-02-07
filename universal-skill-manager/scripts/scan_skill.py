@@ -512,19 +512,118 @@ class SkillScanner:
 
     def _check_encoded_content(self, lines, file):
         """Check for base64 or other encoded content that may hide payloads."""
-        pass
+        patterns = [
+            (re.compile(r'[A-Za-z0-9+/]{40,}={0,2}'), "Long base64-encoded string detected"),
+            (re.compile(r'(?:\\x[0-9a-fA-F]{2}){4,}'), "Hex escape sequences detected"),
+            (re.compile(r'(?:\\u[0-9a-fA-F]{4}){3,}'), "Unicode escape sequences detected"),
+            (re.compile(r'(?:&#x?[0-9a-fA-F]+;){3,}'), "HTML entity sequences detected"),
+            (re.compile(r'(?:%[0-9a-fA-F]{2}){6,}'), "URL-encoded sequences detected"),
+        ]
+
+        for line_num, line in enumerate(lines, start=1):
+            for regex, description in patterns:
+                match = regex.search(line)
+                if match:
+                    matched = match.group()
+                    length = len(matched)
+                    display = (matched[:60] + "...") if len(matched) > 60 else matched
+                    self._add_finding(
+                        severity="info",
+                        category="encoded_content",
+                        file=file,
+                        line=line_num,
+                        description=f"{description} ({length} chars)",
+                        matched_text=display,
+                        recommendation="Review encoded content carefully. Encoded strings can hide malicious payloads from human review.",
+                    )
+                    break  # One finding per line
 
     def _check_prompt_extraction(self, lines, file):
         """Check for attempts to extract system prompts or instructions."""
-        pass
+        patterns = [
+            r'reveal\s+(your\s+)?system\s+prompt',
+            r'show\s+(me\s+)?your\s+instructions',
+            r'print\s+(your\s+)?(initial\s+)?prompt',
+            r'output\s+your\s+(configuration|instructions)',
+            r'what\s+(were\s+you|are\s+your)\s+(told|instructions)',
+            r'repeat\s+the\s+(above|previous)\s+text',
+            r'display\s+(your\s+)?(system\s+)?(prompt|instructions)',
+        ]
+
+        compiled = [re.compile(p, re.IGNORECASE) for p in patterns]
+
+        for line_num, line in enumerate(lines, start=1):
+            for regex in compiled:
+                if regex.search(line):
+                    self._add_finding(
+                        severity="info",
+                        category="prompt_extraction",
+                        file=file,
+                        line=line_num,
+                        description="Potential prompt extraction attempt detected",
+                        matched_text=line.strip()[:100],
+                        recommendation="Skill files should not attempt to extract system prompts or instructions from the AI.",
+                    )
+                    break  # One finding per line
 
     def _check_delimiter_injection(self, lines, file):
         """Check for delimiter injection attacks."""
-        pass
+        # Case-sensitive exact token patterns
+        tokens = [
+            r'<\|system\|>',
+            r'<\|user\|>',
+            r'<\|assistant\|>',
+            r'<\|im_start\|>',
+            r'<\|im_end\|>',
+            r'\[INST\]',
+            r'\[/INST\]',
+            r'<<SYS>>',
+            r'<</SYS>>',
+        ]
+
+        compiled = [re.compile(p) for p in tokens]
+
+        for line_num, line in enumerate(lines, start=1):
+            for regex in compiled:
+                match = regex.search(line)
+                if match:
+                    self._add_finding(
+                        severity="info",
+                        category="delimiter_injection",
+                        file=file,
+                        line=line_num,
+                        description=f"LLM delimiter token detected: {match.group()}",
+                        matched_text=line.strip()[:100],
+                        recommendation="Skill files should not contain LLM chat delimiters. These can be used to inject system-level instructions.",
+                    )
+                    break  # One finding per line
 
     def _check_cross_skill_escalation(self, lines, file):
         """Check for attempts to escalate privileges across skills."""
-        pass
+        patterns = [
+            r'install\s+(this\s+|the\s+)?skill\s+from\s+https?://',
+            r'download\s+(this\s+|the\s+)?skill\s+from',
+            r'fetch\s+(this\s+|the\s+)?(skill|extension)\s+from',
+            r'add\s+(this\s+)?to\s+~/\.(claude|gemini|cursor|codex|roo)',
+            r'cp\s+.*\s+~/\.(claude|gemini|cursor|codex|roo)/(skills|extensions)',
+            r'git\s+clone\s+.*\s+~/\.(claude|gemini|cursor|codex)',
+        ]
+
+        compiled = [re.compile(p, re.IGNORECASE) for p in patterns]
+
+        for line_num, line in enumerate(lines, start=1):
+            for regex in compiled:
+                if regex.search(line):
+                    self._add_finding(
+                        severity="info",
+                        category="cross_skill_escalation",
+                        file=file,
+                        line=line_num,
+                        description="Potential cross-skill escalation attempt detected",
+                        matched_text=line.strip()[:100],
+                        recommendation="Skill files should not attempt to install other skills or modify AI tool directories. Use the skill manager for installations.",
+                    )
+                    break  # One finding per line
 
     def _add_finding(self, severity, category, file, line, description, matched_text, recommendation):
         """Add a finding to the findings list."""
