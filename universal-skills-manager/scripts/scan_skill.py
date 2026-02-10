@@ -187,6 +187,7 @@ class SkillScanner:
         elif suffix in _SCRIPT_EXTENSIONS or basename in _BUILD_BASENAMES:
             self._check_exfiltration_urls(lines, relative)
             self._check_credential_references(lines, relative)
+            self._check_hardcoded_secrets(lines, relative)
             self._check_command_execution(lines, relative)
             self._check_shell_pipe_execution(lines, relative)
             self._check_encoded_content(lines, relative)
@@ -195,6 +196,7 @@ class SkillScanner:
         elif suffix in _CONFIG_EXTENSIONS:
             self._check_exfiltration_urls(lines, relative)
             self._check_credential_references(lines, relative)
+            self._check_hardcoded_secrets(lines, relative)
             self._check_encoded_content(lines, relative)
 
         # Multi-line detection pass on joined continuation lines
@@ -210,6 +212,7 @@ class SkillScanner:
         self._check_exfiltration_urls(lines, file)
         self._check_shell_pipe_execution(lines, file)
         self._check_credential_references(lines, file)
+        self._check_hardcoded_secrets(lines, file)
         self._check_external_url_references(lines, file)
         self._check_command_execution(lines, file)
         self._check_instruction_override(lines, file)
@@ -355,6 +358,25 @@ class SkillScanner:
             r'\$\{?API_SECRET\}?',
             r'\$\{?GOOGLE_API_KEY\}?',
             r'\$\{?STRIPE_SECRET\}?',
+            r'\$\{?AZURE_CLIENT_SECRET\}?',
+            r'\$\{?AZURE_TENANT_ID\}?',
+            r'\$\{?SLACK_TOKEN\}?',
+            r'\$\{?SLACK_WEBHOOK_URL\}?',
+            r'\$\{?SLACK_BOT_TOKEN\}?',
+            r'\$\{?SENDGRID_API_KEY\}?',
+            r'\$\{?NPM_TOKEN\}?',
+            r'\$\{?NODE_AUTH_TOKEN\}?',
+            r'\$\{?GITLAB_TOKEN\}?',
+            r'\$\{?CI_JOB_TOKEN\}?',
+            r'\$\{?HEROKU_API_KEY\}?',
+            r'\$\{?DIGITALOCEAN_TOKEN\}?',
+            r'\$\{?TWILIO_AUTH_TOKEN\}?',
+            r'\$\{?DATADOG_API_KEY\}?',
+            r'\$\{?SENTRY_AUTH_TOKEN\}?',
+            r'\$\{?CIRCLECI_TOKEN\}?',
+            r'\$\{?DOCKER_PASSWORD\}?',
+            r'\$\{?CLOUDFLARE_API_TOKEN\}?',
+            r'\$\{?TERRAFORM_TOKEN\}?',
         ]
 
         compiled_path = [re.compile(p, re.IGNORECASE) for p in path_patterns]
@@ -386,6 +408,37 @@ class SkillScanner:
                             recommendation="Avoid hardcoding or directly referencing sensitive environment variables in skill files.",
                         )
                         break
+
+    def _check_hardcoded_secrets(self, lines, file):
+        """Check for hardcoded secret values (not env var references)."""
+        patterns = [
+            (r'AKIA[A-Z0-9]{16}', "AWS access key ID"),
+            (r'ghp_[A-Za-z0-9]{36,}', "GitHub personal access token"),
+            (r'gho_[A-Za-z0-9]{36,}', "GitHub OAuth token"),
+            (r'ghu_[A-Za-z0-9]{36,}', "GitHub user-to-server token"),
+            (r'ghs_[A-Za-z0-9]{36,}', "GitHub server-to-server token"),
+            (r'github_pat_[A-Za-z0-9_]{22,}', "GitHub fine-grained PAT"),
+            (r'sk-[a-zA-Z0-9]{20,}', "OpenAI/generic API key"),
+            (r'xox[baprs]-[0-9]{10,13}-[0-9A-Za-z-]+', "Slack token"),
+            (r'-----BEGIN\s+(RSA\s+|OPENSSH\s+|EC\s+)?PRIVATE\s+KEY-----', "Private key block"),
+            (r'eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+', "JWT token"),
+        ]
+
+        compiled = [(re.compile(p), desc) for p, desc in patterns]
+
+        for line_num, line in enumerate(lines, start=1):
+            for regex, description in compiled:
+                if regex.search(line):
+                    self._add_finding(
+                        severity="warning",
+                        category="hardcoded_secret",
+                        file=file,
+                        line=line_num,
+                        description=f"Hardcoded secret detected: {description}",
+                        matched_text=line.strip()[:100],
+                        recommendation="Never hardcode secrets. Use environment variables or a secrets manager.",
+                    )
+                    break
 
     def _check_external_url_references(self, lines, file):
         """Check for external URL references that may fetch untrusted content."""

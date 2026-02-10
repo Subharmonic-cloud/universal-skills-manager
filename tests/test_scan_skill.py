@@ -158,3 +158,38 @@ def test_multiline_os_system_detected(scanner, tmp_skill):
     assert any(
         f["category"] == "command_execution" for f in report["findings"]
     )
+
+
+# --- Task 2.4: Expanded credentials (H4) ---
+
+
+@pytest.mark.parametrize("env_var", [
+    "$AZURE_CLIENT_SECRET",
+    "$SLACK_TOKEN",
+    "$SENDGRID_API_KEY",
+    "$NPM_TOKEN",
+    "$GITLAB_TOKEN",
+    "$HEROKU_API_KEY",
+    "$DIGITALOCEAN_TOKEN",
+])
+def test_additional_env_credentials_detected(scanner, tmp_skill, env_var):
+    """Additional cloud/SaaS env var references must be detected."""
+    tmp_skill.add_file("config.yaml", f"token: {env_var}")
+    report = scanner.scan_path(tmp_skill.base)
+    assert any(f["category"] == "credential_reference" for f in report["findings"]), (
+        f"{env_var} not detected"
+    )
+
+
+@pytest.mark.parametrize("secret,desc", [
+    ("AKIAIOSFODNN7EXAMPLE", "AWS access key"),
+    ("ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij", "GitHub PAT"),
+    ("xoxb-123456789012-1234567890123-AbCdEfGhIjKlMnOpQrStUvWx", "Slack bot token"),
+    ("-----BEGIN RSA PRIVATE KEY-----", "RSA private key"),
+])
+def test_hardcoded_secrets_detected(scanner, tmp_skill, secret, desc):
+    """Hardcoded secret values must be detected."""
+    tmp_skill.add_file("config.yaml", f"value: {secret}")
+    report = scanner.scan_path(tmp_skill.base)
+    cred_findings = [f for f in report["findings"] if f["category"] == "hardcoded_secret"]
+    assert len(cred_findings) >= 1, f"Hardcoded {desc} not detected"
