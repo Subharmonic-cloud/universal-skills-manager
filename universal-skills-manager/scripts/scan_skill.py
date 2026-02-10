@@ -34,7 +34,7 @@ import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 
 MAX_FILE_SIZE = 10_000_000  # 10 MB
 MAX_FILE_COUNT = 1000
@@ -228,7 +228,7 @@ _INSTRUCTION_OVERRIDE_PATTERNS = [
 
 _ROLE_HIJACKING_PATTERNS = [
     re.compile(p, re.IGNORECASE) for p in [
-        r'you\s+are\s+now\s+(?!going|ready|able)',
+        r'you\s+are\s+now\s+(?!going|ready|able|seeing|in\s+the|connected|running|using|looking|inside|logged)',
         r'act\s+as\s+(if\s+)?(you\s+are|an?\s+)',
         r'pretend\s+(to\s+be|you\s+are)',
         r'assume\s+the\s+role\s+of',
