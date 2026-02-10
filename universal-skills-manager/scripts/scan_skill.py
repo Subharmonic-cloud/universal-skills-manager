@@ -29,6 +29,7 @@ import json
 import os
 import re
 import sys
+import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -174,6 +175,7 @@ class SkillScanner:
         except (UnicodeDecodeError, PermissionError, OSError):
             return
 
+        content = unicodedata.normalize("NFC", content)
         self.files_scanned.append(relative)
         lines = content.splitlines()
         suffix = file_path.suffix.lower()
@@ -192,6 +194,7 @@ class SkillScanner:
             self._check_exfiltration_urls(lines, relative)
             self._check_credential_references(lines, relative)
             self._check_hardcoded_secrets(lines, relative)
+            self._check_homoglyphs(lines, relative)
             self._check_command_execution(lines, relative)
             self._check_shell_pipe_execution(lines, relative)
             self._check_encoded_content(lines, relative)
@@ -217,6 +220,7 @@ class SkillScanner:
         self._check_shell_pipe_execution(lines, file)
         self._check_credential_references(lines, file)
         self._check_hardcoded_secrets(lines, file)
+        self._check_homoglyphs(lines, file)
         self._check_external_url_references(lines, file)
         self._check_command_execution(lines, file)
         self._check_instruction_override(lines, file)
@@ -277,6 +281,32 @@ class SkillScanner:
                     description=f"Invisible Unicode characters detected: {cp_display}",
                     matched_text=line.strip()[:120],
                     recommendation="Remove invisible characters. These can hide malicious instructions from human review.",
+                )
+
+    # Common Cyrillic-to-Latin homoglyphs
+    _HOMOGLYPHS = {
+        '\u0430': 'a', '\u0435': 'e', '\u043e': 'o', '\u0440': 'p',
+        '\u0441': 'c', '\u0443': 'y', '\u0445': 'x', '\u0456': 'i',
+        '\u0458': 'j', '\u04bb': 'h', '\u0455': 's', '\u0442': 't',
+    }
+
+    def _check_homoglyphs(self, lines, file):
+        """Check for non-ASCII characters that look like ASCII (homoglyphs)."""
+        for line_num, line in enumerate(lines, start=1):
+            found = []
+            for ch in line:
+                if ch in self._HOMOGLYPHS:
+                    found.append(f"U+{ord(ch):04X} (looks like '{self._HOMOGLYPHS[ch]}')")
+            if found:
+                shown = ", ".join(found[:5])
+                self._add_finding(
+                    severity="warning",
+                    category="homoglyph_detected",
+                    file=file,
+                    line=line_num,
+                    description=f"Homoglyph characters detected: {shown}",
+                    matched_text=line.strip()[:120],
+                    recommendation="Replace look-alike characters with their ASCII equivalents. Homoglyphs can bypass text-based security checks.",
                 )
 
     def _check_exfiltration_urls(self, lines, file):
