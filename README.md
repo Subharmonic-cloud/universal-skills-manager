@@ -85,6 +85,8 @@ The installer will:
 
 **Supported `--tools` values:** `claude`, `gemini`, `antigravity`, `opencode`, `openclaw`, `codex`, `goose`, `roo`, `cursor`
 
+> **Note:** The installer automatically installs to **all** detected AI tools without prompting for confirmation. If you only want to install to specific tools, use the `--tools` flag to target them explicitly.
+
 ### Option 2: Manual Install
 
 ```bash

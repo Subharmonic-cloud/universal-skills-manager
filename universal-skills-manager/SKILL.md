@@ -120,9 +120,10 @@ This skill (Universal Skills Manager) requires network access to call the Skills
 1.  **Discover API Key and Select Source:**
     *   **Step 1 - Environment Variable:** Check `$SKILLSMP_API_KEY`
         ```bash
-        echo $SKILLSMP_API_KEY
+        printenv SKILLSMP_API_KEY
         ```
         If set and non-empty, use SkillsMP as the primary search source.
+        **Note:** Use `printenv` (not `echo $VAR`) — it queries the process environment directly and is more reliable across shell contexts.
 
     *   **Step 2 - Config File:** Check for `config.json` in this skill's directory
         ```bash
