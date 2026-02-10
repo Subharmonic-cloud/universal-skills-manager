@@ -309,3 +309,37 @@ def test_binary_file_produces_finding(scanner, tmp_skill):
     binary = [f for f in report["findings"] if f["category"] == "binary_file"]
     assert len(binary) == 1
     assert binary[0]["severity"] == "info"
+
+
+# --- Task 4.2: Directory depth and file count limits (L2) ---
+
+
+def test_file_count_limit(scanner, tmp_skill):
+    """Scanner must stop after hitting file count limit."""
+    import scan_skill
+    original = scan_skill.MAX_FILE_COUNT
+    scan_skill.MAX_FILE_COUNT = 5
+    try:
+        for i in range(20):
+            tmp_skill.add_file(f"file_{i}.md", f"content {i}")
+        report = scanner.scan_path(tmp_skill.base)
+        assert len(report["files_scanned"]) <= 5
+        limit_findings = [f for f in report["findings"] if f["category"] == "scan_limit_reached"]
+        assert len(limit_findings) == 1
+    finally:
+        scan_skill.MAX_FILE_COUNT = original
+
+
+def test_depth_limit(scanner, tmp_skill):
+    """Scanner must not descend beyond depth limit."""
+    import scan_skill
+    original = scan_skill.MAX_DIR_DEPTH
+    scan_skill.MAX_DIR_DEPTH = 3
+    try:
+        tmp_skill.add_file("a/b/c/d/e/deep.md", "deep content")
+        tmp_skill.add_file("a/shallow.md", "shallow content")
+        report = scanner.scan_path(tmp_skill.base)
+        assert any("shallow" in f for f in report["files_scanned"])
+        assert not any("deep" in f for f in report["files_scanned"])
+    finally:
+        scan_skill.MAX_DIR_DEPTH = original

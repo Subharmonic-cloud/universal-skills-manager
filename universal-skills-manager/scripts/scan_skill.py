@@ -36,6 +36,8 @@ from pathlib import Path
 VERSION = "1.0.0"
 
 MAX_FILE_SIZE = 10_000_000  # 10 MB
+MAX_FILE_COUNT = 1000
+MAX_DIR_DEPTH = 10
 
 _SCRIPT_EXTENSIONS = frozenset({
     ".py", ".sh", ".bash", ".js", ".mjs", ".cjs", ".ts", ".tsx",
@@ -340,11 +342,35 @@ class SkillScanner:
         if path.is_file():
             self._scan_file(path, path.parent)
         elif path.is_dir():
+            file_count = 0
+            limit_reached = False
             for root, dirs, files in os.walk(path, followlinks=False):
                 dirs[:] = [d for d in dirs if d not in _SKIP_DIRS]
+
+                # Depth limit
+                depth = len(Path(root).relative_to(path).parts)
+                if depth >= MAX_DIR_DEPTH:
+                    dirs.clear()
+                    continue
+
                 for fname in sorted(files):
+                    if file_count >= MAX_FILE_COUNT:
+                        self._add_finding(
+                            severity="warning",
+                            category="scan_limit_reached",
+                            file="(scan)",
+                            line=0,
+                            description=f"File count limit reached ({MAX_FILE_COUNT}). Remaining files not scanned.",
+                            matched_text="",
+                            recommendation="Skill packages with this many files are suspicious. Review manually.",
+                        )
+                        limit_reached = True
+                        break
                     file_path = Path(root) / fname
                     self._scan_file(file_path, path)
+                    file_count += 1
+                if limit_reached:
+                    break
         else:
             print(f"Error: path does not exist: {path}", file=sys.stderr)
             sys.exit(1)
