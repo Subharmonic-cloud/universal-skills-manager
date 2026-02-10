@@ -1,9 +1,16 @@
 ---
 name: universal-skills-manager
 description: The master coordinator for AI skills. Discovers skills from multiple sources (SkillsMP.com, SkillHub, and ClawHub), manages installation, and synchronization across Claude Code, Gemini CLI, Google Anti-Gravity, OpenCode, and other AI tools. Handles User-level (Global) and Project-level (Local) scopes.
+homepage: https://github.com/jbendavi/universal-skills_mp-manager
+metadata:
+  clawdbot:
+    requires:
+      bins: ["python3", "curl"]
+    primaryEnv: SKILLSMP_API_KEY
+    disable-model-invocation: true
 ---
 
-<!-- Version: 1.4.0 -->
+<!-- Version: 1.4.1 -->
 
 # Universal Skills Manager
 
@@ -60,7 +67,7 @@ This skill (Universal Skills Manager) requires network access to call the Skills
   
   This is experimental - Cowork's default network access is restricted. Check your Cowork network egress settings."
 
-*(Note: If a tool uses a different directory structure, ask the user to confirm the path, then remember it using `save_memory`.)*
+*(Note: If a tool uses a different directory structure, ask the user to confirm the path, then note it for future reference.)*
 
 ## Core Capabilities
 
@@ -297,6 +304,7 @@ This skill (Universal Skills Manager) requires network access to call the Skills
     *   Ask: "Please provide your SkillsMP API key. You can get one at https://skillsmp.com"
     *   Wait for user to provide the key
     *   **Security:** Do not echo or display the key back to the user
+    *   **Note:** The API key is stored locally in `config.json` inside the ZIP package. It is never transmitted to any third-party server by this skill. The key is only used at runtime to authenticate with the SkillsMP API when searching for skills.
 
 3.  **Create Package Contents:**
     *   Create a temporary directory structure:

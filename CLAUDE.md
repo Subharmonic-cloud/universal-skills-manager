@@ -33,7 +33,7 @@ universal-skills-manager/
 ### Skill Structure
 
 The `SKILL.md` file follows this format:
-- **Frontmatter**: YAML metadata (name, description)
+- **Frontmatter**: YAML metadata (name, description, homepage, metadata block with runtime requirements)
 - **Documentation**: Markdown content describing when to use the skill, capabilities, operational rules
 - **Implementation details**: Instructions for the AI agent on how to execute skill functionality
 
@@ -200,7 +200,7 @@ When modifying the skill:
 ### Modifying the Skill
 
 When editing `SKILL.md`:
-- Maintain YAML frontmatter validity (name, description fields)
+- Maintain YAML frontmatter validity (name, description, homepage, metadata fields)
 - Keep the structure: frontmatter → usage triggers → capabilities → operational rules
 - Ensure instructions are clear for AI agent execution
 - Test that the markdown renders correctly
