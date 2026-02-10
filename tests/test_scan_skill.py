@@ -361,3 +361,15 @@ def test_symlink_rejected_by_open(scanner, tmp_skill, tmp_path):
     tmp_skill.add_symlink("sneaky.md", real)
     report = scanner.scan_path(tmp_skill.base)
     assert "sneaky.md" not in report["files_scanned"]
+
+
+# --- Task 4.4: Multiple HTML comments per line (L4) ---
+
+
+def test_multiple_html_comments_per_line(scanner, tmp_skill):
+    """Multiple HTML comments on one line must all be detected."""
+    content = "<!-- first --> text <!-- second -->\n"
+    tmp_skill.add_file("SKILL.md", content)
+    report = scanner.scan_path(tmp_skill.base)
+    comment_findings = [f for f in report["findings"] if f["category"] == "html_comment"]
+    assert len(comment_findings) == 2

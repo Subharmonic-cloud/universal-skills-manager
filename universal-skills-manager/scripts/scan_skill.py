@@ -766,26 +766,35 @@ class SkillScanner:
                 if start_idx == -1:
                     continue
 
-                # Check if comment closes on the same line
-                end_idx = line.find("-->", start_idx + 4)
-                if end_idx != -1:
-                    # Single-line comment
-                    content = line[start_idx + 4:end_idx].strip()
-                    display = content[:80] if len(content) > 80 else content
-                    self._add_finding(
-                        severity="warning",
-                        category="html_comment",
-                        file=file,
-                        line=line_num,
-                        description=f"HTML comment detected — may contain hidden instructions: {display}",
-                        matched_text=line.strip()[:100],
-                        recommendation="Review HTML comments carefully. They are invisible in rendered markdown and can hide malicious instructions.",
-                    )
-                else:
-                    # Multi-line comment starts
-                    in_comment = True
-                    comment_start_line = line_num
-                    comment_content = line[start_idx + 4:]
+                # Scan for all comments starting from this position
+                rest = line[start_idx:]
+                while True:
+                    end_idx = rest.find("-->", 4)
+                    if end_idx != -1:
+                        # Single-line comment
+                        c = rest[4:end_idx].strip()
+                        d = c[:80] if len(c) > 80 else c
+                        self._add_finding(
+                            severity="warning",
+                            category="html_comment",
+                            file=file,
+                            line=line_num,
+                            description=f"HTML comment detected — may contain hidden instructions: {d}",
+                            matched_text=rest[:end_idx + 3].strip()[:100],
+                            recommendation="Review HTML comments carefully. They are invisible in rendered markdown and can hide malicious instructions.",
+                        )
+                        # Look for another comment in the remainder
+                        rest = rest[end_idx + 3:]
+                        next_start = rest.find("<!--")
+                        if next_start == -1:
+                            break
+                        rest = rest[next_start:]
+                    else:
+                        # Multi-line comment starts
+                        in_comment = True
+                        comment_start_line = line_num
+                        comment_content = rest[4:]
+                        break
             else:
                 # Inside a multi-line comment, look for closing
                 end_idx = line.find("-->")
@@ -805,6 +814,36 @@ class SkillScanner:
                     )
                     in_comment = False
                     comment_content = ""
+                    # Check remainder of line for more comments
+                    remainder = line[end_idx + 3:]
+                    next_start = remainder.find("<!--")
+                    if next_start != -1:
+                        # Re-process from the new comment opening
+                        rest = remainder[next_start:]
+                        while True:
+                            close = rest.find("-->", 4)
+                            if close != -1:
+                                c = rest[4:close].strip()
+                                d = c[:80] if len(c) > 80 else c
+                                self._add_finding(
+                                    severity="warning",
+                                    category="html_comment",
+                                    file=file,
+                                    line=line_num,
+                                    description=f"HTML comment detected — may contain hidden instructions: {d}",
+                                    matched_text=rest[:close + 3].strip()[:100],
+                                    recommendation="Review HTML comments carefully. They are invisible in rendered markdown and can hide malicious instructions.",
+                                )
+                                rest = rest[close + 3:]
+                                ns = rest.find("<!--")
+                                if ns == -1:
+                                    break
+                                rest = rest[ns:]
+                            else:
+                                in_comment = True
+                                comment_start_line = line_num
+                                comment_content = rest[4:]
+                                break
                 else:
                     comment_content += "\n" + line
 
@@ -891,9 +930,11 @@ class SkillScanner:
 
     def _add_finding(self, severity, category, file, line, description, matched_text, recommendation):
         """Add a finding to the findings list."""
-        # Deduplicate by file+line+category
+        # Deduplicate by file+line+category+description
         for existing in self.findings:
-            if existing.file == file and existing.line == line and existing.category == category:
+            if (existing.file == file and existing.line == line
+                    and existing.category == category
+                    and existing.description == description):
                 return
         # Strip ANSI escape sequences and control characters
         sanitized_text = _ANSI_ESCAPE_RE.sub('', matched_text)
