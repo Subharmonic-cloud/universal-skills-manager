@@ -34,6 +34,10 @@ from pathlib import Path
 
 VERSION = "1.0.0"
 
+_ANSI_ESCAPE_RE = re.compile(
+    r'\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07]*(?:\x07|\x1b\\)|\x1b[()][A-B0-2]'
+)
+
 
 class Finding:
     """Represents a single security finding from the scan."""
@@ -650,13 +654,18 @@ class SkillScanner:
 
     def _add_finding(self, severity, category, file, line, description, matched_text, recommendation):
         """Add a finding to the findings list."""
+        # Strip ANSI escape sequences and control characters
+        sanitized_text = _ANSI_ESCAPE_RE.sub('', matched_text)
+        sanitized_text = ''.join(
+            ch for ch in sanitized_text if ch == '\n' or ch == '\t' or not (0 <= ord(ch) < 32)
+        )
         finding = Finding(
             severity=severity,
             category=category,
             file=file,
             line=line,
             description=description,
-            matched_text=matched_text,
+            matched_text=sanitized_text,
             recommendation=recommendation,
         )
         self.findings.append(finding)
