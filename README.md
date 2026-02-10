@@ -1,25 +1,26 @@
-# Universal Skills(mp) Manager
+# Universal Skills Manager
 
 <p align="center">
-  <img src="assets/mascot.jpeg" alt="Universal Skills(mp) Manager" width="100%">
+  <img src="assets/mascot.png" alt="Universal Skills Manager" width="100%">
 </p>
 
 <p align="center">
-  <a href="https://skillsmp.com">Powered by SkillsMP.com</a> • 
-  <a href="#quick-start">Quick Start</a> • 
-  <a href="#features">Features</a> • 
+  <a href="https://skillsmp.com">SkillsMP.com</a> •
+  <a href="https://skills.palebluedot.live">SkillHub</a> •
+  <a href="#quick-start">Quick Start</a> •
+  <a href="#features">Features</a> •
   <a href="#supported-tools">Supported Tools</a>
 </p>
 
 ---
 
-A centralized skill manager for AI coding assistants. Discovers, installs, and synchronizes skills from [SkillsMP.com](https://skillsmp.com) across multiple AI tools including Claude Code, OpenAI Codex, Gemini CLI, and more.
+A centralized skill manager for AI coding assistants. Discovers, installs, and synchronizes skills from multiple sources — [SkillsMP.com](https://skillsmp.com) (curated, AI semantic search) and [SkillHub](https://skills.palebluedot.live) (173k+ community skills, no API key required) — across multiple AI tools including Claude Code, OpenAI Codex, Gemini CLI, and more.
 
 ## Demo
 
 <p align="center">
   <a href="https://youtu.be/PnOD9pJCk1U">
-    <img src="https://img.youtube.com/vi/PnOD9pJCk1U/0.jpg" alt="Universal Skill Manager Demo" width="100%">
+    <img src="https://img.youtube.com/vi/PnOD9pJCk1U/0.jpg" alt="Universal Skills Manager Demo" width="100%">
   </a>
 </p>
 
@@ -32,7 +33,7 @@ This video covers:
 
 ## Features
 
-- 🔍 **Search & Discover**: Find skills using keyword or AI semantic search via SkillsMP API
+- 🔍 **Multi-Source Search**: Find skills from SkillsMP (curated, AI semantic search) and SkillHub (173k+ community catalog, no API key needed)
 - 📦 **One-Click Install**: Download and validate skills with atomic installation (temp → validate → install)
 - 🔄 **Cross-Tool Sync**: Automatically sync skills across all your installed AI tools
 - 📊 **Skill Matrix Report**: See which skills are installed on which tools at a glance
@@ -57,13 +58,13 @@ Findings are displayed with severity levels (Critical/Warning/Info) and you choo
 ### Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/jacob-bd/universal-skills_mp-manager.git
-cd universal-skills_mp-manager
+git clone https://github.com/jacob-bd/universal-skills-manager.git
+cd universal-skills-manager
 ```
 
 ### Step 2: Copy to Your AI Tool
 
-Copy the `universal-skill-manager` folder to your tool's skills directory:
+Copy the `universal-skills-manager` folder to your tool's skills directory:
 
 | Tool | Global Path |
 |------|-------------|
@@ -80,16 +81,16 @@ Copy the `universal-skill-manager` folder to your tool's skills directory:
 
 ```bash
 # Example: Install to OpenAI Codex
-cp -r universal-skill-manager ~/.codex/skills/
+cp -r universal-skills-manager ~/.codex/skills/
 
 # Example: Install to Claude Code
-cp -r universal-skill-manager ~/.claude/skills/
+cp -r universal-skills-manager ~/.claude/skills/
 
 # Example: Install to Gemini CLI
-cp -r universal-skill-manager ~/.gemini/skills/
+cp -r universal-skills-manager ~/.gemini/skills/
 
 # Example: Install to OpenClaw
-cp -r universal-skill-manager ~/.openclaw/workspace/skills/
+cp -r universal-skills-manager ~/.openclaw/workspace/skills/
 ```
 
 ### Step 3: Restart Your AI Assistant
@@ -139,7 +140,7 @@ python3 path/to/install_skill.py \
 
 ### API Key Setup
 
-The Universal Skill Manager requires a SkillsMP API key to search and discover skills.
+The Universal Skills Manager uses a SkillsMP API key for curated search with AI semantic matching. **The API key is optional** — without it, you can still search SkillHub's open catalog of 173k+ community skills.
 
 #### Option 1: Shell Profile (Recommended)
 
@@ -235,7 +236,7 @@ Once installed, the skill activates automatically when you:
 "Show me skills for testing"
 ```
 
-The AI will search SkillsMP.com and display relevant skills with:
+The AI will search available sources (SkillsMP and/or SkillHub) and display relevant skills with:
 - Skill name and author
 - Description
 - Star rating
@@ -274,7 +275,7 @@ The AI will:
 
 ## How It Works
 
-1. **Discovery**: The AI queries the SkillsMP.com API using keyword or semantic search
+1. **Discovery**: The AI queries multiple sources (SkillsMP.com and/or SkillHub) using keyword or semantic search
 2. **Selection**: You choose which skill to install from the results
 3. **Fetching**: The AI fetches the SKILL.md content from the skill's GitHub repository
 4. **Installation**: Creates the proper directory structure (`~/.claude/skills/{skill-name}/`)
@@ -316,13 +317,13 @@ The AI will:
 
 1. Copy the skill folder and create `config.json`:
    ```bash
-   cp -r universal-skill-manager /tmp/
-   echo '{"skillsmp_api_key": "YOUR_KEY_HERE"}' > /tmp/universal-skill-manager/config.json
+   cp -r universal-skills-manager /tmp/
+   echo '{"skillsmp_api_key": "YOUR_KEY_HERE"}' > /tmp/universal-skills-manager/config.json
    ```
 
 2. Create ZIP:
    ```bash
-   cd /tmp && zip -r universal-skill-manager.zip universal-skill-manager/
+   cd /tmp && zip -r universal-skills-manager.zip universal-skills-manager/
    ```
 
 3. Upload to claude.ai:
@@ -334,7 +335,7 @@ The AI will:
 
 ## API Reference
 
-### Search Endpoints
+### SkillsMP (Curated, API Key Required)
 
 **Keyword Search**
 ```bash
@@ -348,8 +349,7 @@ curl -X GET "https://skillsmp.com/api/v1/skills/ai-search?q=help+me+debug+code" 
   -H "Authorization: Bearer $SKILLSMP_API_KEY"
 ```
 
-### Response Format
-
+**Response Format:**
 ```json
 {
   "success": true,
@@ -369,14 +369,44 @@ curl -X GET "https://skillsmp.com/api/v1/skills/ai-search?q=help+me+debug+code" 
 }
 ```
 
+### SkillHub (Community, No API Key Required)
+
+**Search Skills**
+```bash
+curl -X GET "https://skills.palebluedot.live/api/skills?q=debugging&limit=20"
+```
+
+**Get Skill Details (required before install)**
+```bash
+curl -X GET "https://skills.palebluedot.live/api/skills/{id}"
+```
+
+**Response Format (Search):**
+```json
+{
+  "skills": [
+    {
+      "id": "wshobson/agents/debugging-strategies",
+      "name": "debugging-strategies",
+      "description": "Master systematic debugging...",
+      "githubOwner": "wshobson",
+      "githubRepo": "agents",
+      "githubStars": 27021,
+      "securityScore": 100
+    }
+  ],
+  "pagination": { "page": 1, "limit": 20, "total": 1000 }
+}
+```
+
 ## Repository Structure
 
 ```
-skillsmp-universal-skills-manager/
+universal-skills-manager/
 ├── README.md                        # This file
 ├── CLAUDE.md                        # Claude Code context file
 ├── specs.md                         # Technical specification
-└── universal-skill-manager/         # The skill itself
+└── universal-skills-manager/        # The skill itself
     ├── SKILL.md                     # Skill definition and logic
     └── scripts/
         └── install_skill.py         # Helper script for downloading skills
@@ -384,11 +414,11 @@ skillsmp-universal-skills-manager/
 
 ## Contributing
 
-Skills are sourced from the community via [SkillsMP.com](https://skillsmp.com). To contribute:
+Skills are sourced from the community via [SkillsMP.com](https://skillsmp.com) and [SkillHub](https://skills.palebluedot.live). To contribute:
 
 1. Create your skill with proper YAML frontmatter
 2. Host it on GitHub
-3. Submit to SkillsMP.com for indexing
+3. Submit to SkillsMP.com for curated indexing, or let SkillHub auto-index from GitHub
 
 ## License
 
@@ -396,13 +426,14 @@ MIT License - See repository for details
 
 ## Support
 
-- **Issues**: Report bugs or request features via GitHub Issues
-- **SkillsMP**: Visit [skillsmp.com](https://skillsmp.com) for skill discovery
+- **Issues**: Report bugs or request features via [GitHub Issues](https://github.com/jacob-bd/universal-skills-manager/issues)
+- **SkillsMP**: Visit [skillsmp.com](https://skillsmp.com) for curated skill discovery
+- **SkillHub**: Visit [skills.palebluedot.live](https://skills.palebluedot.live) for community skills
 - **Documentation**: See `CLAUDE.md` for technical details
 
 ---
 
-**Note**: This skill requires an active internet connection to search SkillsMP.com and fetch skill content from GitHub.
+**Note**: This skill requires an active internet connection to search SkillsMP.com / SkillHub and fetch skill content from GitHub.
 
 ## Acknowledgments
 

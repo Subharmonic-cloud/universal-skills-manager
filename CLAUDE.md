@@ -4,10 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This repository contains the **Universal Skill Manager** skill, which acts as a centralized package manager for AI capabilities across multiple AI coding tools (Gemini CLI, Google Anti-Gravity, OpenCode, Claude Code, Cursor, etc.).
+This repository contains the **Universal Skills Manager** skill, which acts as a centralized package manager for AI capabilities across multiple AI coding tools (Gemini CLI, Google Anti-Gravity, OpenCode, Claude Code, Cursor, etc.).
 
 The skill enables:
-- **Discovery**: Searching for skills from SkillsMP.com using keyword or AI semantic search
+- **Discovery**: Searching for skills from multiple sources — SkillsMP.com (curated, AI semantic search) and SkillHub (173k+ community skills, no API key required)
 - **Installation**: Installing skills from GitHub to User-level (global) or Project-level (local) scopes
 - **Synchronization**: Copying/syncing skills across different AI tools
 - **Consistency**: Maintaining version consistency across installed locations
@@ -15,16 +15,16 @@ The skill enables:
 
 ## Architecture
 
-This is a **skill definition repository** containing the Universal Skill Manager in the `universal-skill-manager/` subfolder. It is not a traditional codebase with source files.
+This is a **skill definition repository** containing the Universal Skills Manager in the `universal-skills-manager/` subfolder. It is not a traditional codebase with source files.
 
 ### Repository Structure
 
 ```
-skillsmp-universal-skills-manager/
+universal-skills-manager/
 ├── README.md                       # Installation & usage documentation
 ├── CLAUDE.md                       # This file - technical context
 ├── specs.md                        # Technical specification for install script
-└── universal-skill-manager/        # The skill folder
+└── universal-skills-manager/       # The skill folder
     ├── SKILL.md                    # Skill definition and logic
     └── scripts/
         └── install_skill.py        # Python helper for downloading skills from GitHub
@@ -56,20 +56,22 @@ The skill manages skills across these AI tools and their respective paths:
 ### claude.ai and Claude Desktop Support
 
 For claude.ai and Claude Desktop, skills must be uploaded as ZIP files through the web UI. The skill includes a "Package for Cloud Upload" capability that:
-1. Prompts user for their SkillsMP API key
+1. Prompts user for their SkillsMP API key (optional — SkillHub works without one)
 2. Creates `config.json` with the embedded key
 3. Generates a ZIP file ready for upload
 
 The hybrid API key discovery checks:
 1. `$SKILLSMP_API_KEY` environment variable (Claude Code)
 2. `config.json` in skill directory (claude.ai/Claude Desktop)
-3. Runtime prompt as fallback (all platforms)
+3. Source selection prompt: offer SkillsMP (with key) or SkillHub (no key needed) as fallback
 
 ## Key Concepts
 
-### SkillsMP API Integration
+### Multi-Source Skill Discovery
 
-The skill uses the SkillsMP.com API to discover skills:
+The skill discovers skills from two sources:
+
+#### SkillsMP API (Primary, Curated)
 
 **API Endpoints:**
 - **Keyword Search**: `/api/v1/skills/search?q={query}&limit=20&sortBy=recent|stars`
@@ -95,10 +97,33 @@ Skills are stored in GitHub repositories. To get the actual SKILL.md content:
 2. Convert to raw URL: `https://raw.githubusercontent.com/{user}/{repo}/{branch}/{path}/SKILL.md`
 3. Fetch using curl or web_fetch
 
+#### SkillHub API (Secondary, Community)
+
+**Base URL:** `https://skills.palebluedot.live/api`
+
+**Authentication:** None required (open API)
+
+**API Endpoints:**
+- **Search**: `GET /api/skills?q={query}&limit=20` — keyword search
+- **Detail**: `GET /api/skills/{id}` — full skill details with `skillPath`, `branch`, `rawContent`
+- **Categories**: `GET /api/categories` — list skill categories
+
+**Response Fields (Search):**
+- `id` (e.g., `wshobson/agents/debugging-strategies`), `name`, `description`
+- `githubOwner`, `githubRepo`, `githubStars`
+- `downloadCount`, `securityScore`, `rating`
+
+**Content Fetching:**
+1. Fetch skill detail: `GET /api/skills/{id}` to get `skillPath` and `branch`
+2. Construct GitHub tree URL: `https://github.com/{githubOwner}/{githubRepo}/tree/{branch}/{skillPath}`
+3. Pass to `install_skill.py` for download
+
+**IMPORTANT:** The `id` field does NOT map to the file path within the repo. Always use the detail endpoint to get the correct `skillPath`.
+
 ### Skill Installation Flow
 
 When installing a skill, the manager:
-1. Identifies the source (SkillsMP API search result or local file)
+1. Identifies the source (SkillsMP search result, SkillHub search result, or local file)
 2. Fetches skill content from GitHub (converts tree URL to raw URL)
 3. Determines target scope (User/Global vs Project/Local)
 4. Performs a "Sync Check" to detect other installed AI tools
@@ -107,10 +132,10 @@ When installing a skill, the manager:
 
 ### Skill Discovery
 
-Skills are discovered using the SkillsMP.com API:
-- **Keyword Search**: Direct term matching, supports pagination and sorting
-- **AI Semantic Search**: Natural language queries with relevance scoring
-- **Method**: API calls using curl/bash, parse JSON responses, display results with metadata (author, stars, description)
+Skills are discovered from multiple sources:
+- **SkillsMP.com** (primary, curated): Keyword search + AI semantic search, requires API key
+- **SkillHub** (secondary, community): Keyword search, no API key required, 173k+ auto-indexed skills
+- **Method**: API calls using curl/bash, parse JSON responses, display results with metadata and source labels
 
 ### Synchronization Logic
 
@@ -123,18 +148,18 @@ The skill maintains consistency by:
 
 ### File Locations
 
-- **Skill definition**: `universal-skill-manager/SKILL.md` - The main skill logic and instructions
-- **Install helper**: `universal-skill-manager/scripts/install_skill.py` - Python script for downloading skills from GitHub
+- **Skill definition**: `universal-skills-manager/SKILL.md` - The main skill logic and instructions
+- **Install helper**: `universal-skills-manager/scripts/install_skill.py` - Python script for downloading skills from GitHub
 - **User documentation**: `README.md` - Installation, configuration, and usage guide
 - **Developer context**: `CLAUDE.md` - This file, technical architecture and guidelines
 
 ### Testing Changes
 
 When modifying the skill:
-1. Edit `universal-skill-manager/SKILL.md`
+1. Edit `universal-skills-manager/SKILL.md`
 2. Verify environment variable `SKILLSMP_API_KEY` is set
 3. Test API calls manually using curl (examples in README)
-4. Install the modified skill locally to test: `cp -r universal-skill-manager ~/.claude/skills/`
+4. Install the modified skill locally to test: `cp -r universal-skills-manager ~/.claude/skills/`
 5. Test discovery, installation, and sync workflows
 
 ## Development Guidelines
@@ -157,7 +182,7 @@ To add a new AI tool:
 
 ### Installed Skill Directory Structure
 
-When the Universal Skill Manager installs a skill, it creates this structure in the target AI tool:
+When the Universal Skills Manager installs a skill, it creates this structure in the target AI tool:
 ```
 ~/.claude/skills/{skill-name}/     # Or other tool's path
   ├── SKILL.md (required)
@@ -173,10 +198,10 @@ For example, installing "code-debugging" creates:
 
 ## Important Notes
 
-- **API Key Required**: The `SKILLSMP_API_KEY` environment variable must be set for skill discovery to work. See README.md for configuration instructions.
+- **API Key Optional**: The `SKILLSMP_API_KEY` environment variable enables SkillsMP search (curated, AI semantic). Without it, SkillHub's open catalog is available as a fallback. See README.md for configuration instructions.
 - **Root Directory Safety**: The install script will abort with exit code 4 if the destination appears to be a root skills directory (contains skills but no SKILL.md). This prevents accidental data loss.
 - **Update Comparison**: When updating an existing skill, the script compares files and shows a diff before overwriting, prompting for confirmation.
 - **No overwriting without confirmation**: Always ask before overwriting existing skills unless "--force" is explicitly used
 - **Structure integrity**: Never dump loose files into the root skills directory; always create a dedicated folder per skill
 - **Cross-platform compatibility**: Some tools (OpenCode, Anti-Gravity) may require additional manifest files generated from SKILL.md frontmatter
-- **GitHub content fetching**: Skills are fetched from GitHub using raw URLs converted from the tree URLs provided by SkillsMP API
+- **GitHub content fetching**: Skills are fetched from GitHub using raw URLs converted from the tree URLs provided by SkillsMP API or constructed from SkillHub detail responses

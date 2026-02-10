@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-02-10
+
+### Added
+- SkillHub integration as secondary search source (173k+ community skills, no API key required).
+- Multi-source skill discovery: SkillsMP (curated, AI semantic search) + SkillHub (open catalog).
+- New onboarding flow: users without a SkillsMP API key can search SkillHub immediately.
+- "Search More Sources" option for SkillsMP users to also query SkillHub.
+- Source labeling in search results ([SkillsMP] vs [SkillHub]).
+- Deduplication logic across sources by full skill ID.
+- SkillHub API documentation in SKILL.md, README.md, and CLAUDE.md.
+
+### Changed
+- Rebranded from "Universal Skill Manager" to "Universal Skills Manager".
+- Renamed skill folder from `universal-skill-manager/` to `universal-skills-manager/` for consistency with branding and repo name. **Breaking:** existing installations will need to remove the old folder manually.
+- Updated repository URL to `https://github.com/jacob-bd/universal-skills-manager`.
+- SkillsMP API key is now optional (was previously required for all skill discovery).
+- Updated install.sh messaging to reflect dual-source availability.
+
 ## [1.1.0] - 2026-02-07
 
 ### Added
@@ -29,7 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2026-02-01
 
 ### Added
-- Initial release of the Universal Skill Manager.
+- Initial release of the Universal Skills Manager.
 - Skill definition with `SKILL.md`.
 - `install_skill.py` script for atomic, safe installation.
 - Support for multiple AI ecosystems (Claude Code, Gemini, Anti-Gravity, OpenCode, etc.).
