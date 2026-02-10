@@ -82,3 +82,21 @@ def test_ansi_escapes_stripped_from_matched_text(scanner, tmp_skill):
         assert "\x1b" not in finding["matched_text"], (
             f"ANSI escape found in matched_text: {finding['matched_text']!r}"
         )
+
+
+# --- Task 2.1: File size limit (H1) ---
+
+
+def test_oversized_file_skipped_with_finding(scanner, tmp_skill):
+    """Files exceeding size limit produce a warning and are not fully scanned."""
+    import scan_skill
+    original = scan_skill.MAX_FILE_SIZE
+    scan_skill.MAX_FILE_SIZE = 100  # 100 bytes for testing
+    try:
+        tmp_skill.add_file("huge.md", "x" * 200)
+        report = scanner.scan_path(tmp_skill.base)
+        oversized = [f for f in report["findings"] if f["category"] == "oversized_file"]
+        assert len(oversized) == 1
+        assert oversized[0]["severity"] == "warning"
+    finally:
+        scan_skill.MAX_FILE_SIZE = original

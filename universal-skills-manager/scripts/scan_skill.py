@@ -34,6 +34,8 @@ from pathlib import Path
 
 VERSION = "1.0.0"
 
+MAX_FILE_SIZE = 10_000_000  # 10 MB
+
 _ANSI_ESCAPE_RE = re.compile(
     r'\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07]*(?:\x07|\x1b\\)|\x1b[()][A-B0-2]'
 )
@@ -105,6 +107,24 @@ class SkillScanner:
 
         # Skip binary files and hidden files
         if file_path.name.startswith("."):
+            return
+
+        # Skip oversized files
+        try:
+            file_size = file_path.stat().st_size
+        except OSError:
+            return
+        if file_size > MAX_FILE_SIZE:
+            self.files_scanned.append(relative)
+            self._add_finding(
+                severity="warning",
+                category="oversized_file",
+                file=relative,
+                line=0,
+                description=f"File exceeds size limit ({file_size:,} bytes > {MAX_FILE_SIZE:,} bytes) — skipped",
+                matched_text="",
+                recommendation="Investigate why a skill file is this large. Large files may be attempting resource exhaustion.",
+            )
             return
 
         try:
