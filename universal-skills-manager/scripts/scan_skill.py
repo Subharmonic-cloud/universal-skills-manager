@@ -73,7 +73,7 @@ class SkillScanner:
         if path.is_file():
             self._scan_file(path, path.parent)
         elif path.is_dir():
-            for root, _dirs, files in os.walk(path):
+            for root, _dirs, files in os.walk(path, followlinks=False):
                 for fname in sorted(files):
                     file_path = Path(root) / fname
                     self._scan_file(file_path, path)
@@ -86,6 +86,17 @@ class SkillScanner:
     def _scan_file(self, file_path, base_path):
         """Read a file, determine its type, and call appropriate check methods."""
         file_path = Path(file_path)
+
+        # Reject symlinks
+        if file_path.is_symlink():
+            return
+
+        # Validate resolved path stays within base directory
+        try:
+            file_path.resolve().relative_to(base_path.resolve())
+        except ValueError:
+            return
+
         relative = str(file_path.relative_to(base_path))
 
         # Skip binary files and hidden files
