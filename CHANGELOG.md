@@ -5,6 +5,50 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-02-10
+
+### Added
+- **Homoglyph transliteration**: Cyrillic homoglyphs are now transliterated to ASCII before running semantic pattern checks (instruction override, role hijacking, safety bypass, prompt extraction). This closes the M2 evasion gap where attackers could use Cyrillic look-alike characters to bypass denylist detection.
+- 3 new tests for homoglyph transliteration (instruction override, safety bypass, and combined detection).
+- Empty file edge case test.
+- `SECURITY.md` with vulnerability reporting process, full security architecture documentation, and known limitations.
+
+### Changed
+- **scan_skill.py bumped to v1.2.0**: Includes homoglyph transliteration, performance fix, and Windows portability.
+- `_join_continuation_lines` refactored from quadratic string concatenation (`+=`) to list accumulator (`''.join()`), preventing potential 10-20s stalls on large files with many continuation lines.
+- Homoglyph map consolidated: single module-level `_HOMOGLYPH_MAP` dict used by both detection and transliteration (was duplicated as class attribute).
+- Tests converted from manual `try/finally` global mutation to pytest `monkeypatch` fixture (safe for parallel test execution).
+- Multi-line detection test fixed: `test_multiline_bash_c_detected` now correctly tests continuation-line joining at natural word boundaries (was previously testing single-line matching).
+- Homoglyph test strengthened: `test_homoglyph_instruction_override_detected` now asserts BOTH `homoglyph_detected` AND `instruction_override` findings (was previously accepting either, masking the M2 gap).
+
+### Fixed
+- **install_skill.py integration bug** (pre-existing): Security scan findings were never displayed to the user. `severity_order` used uppercase (`"CRITICAL"`) but scanner outputs lowercase (`"critical"`), and field name was `"message"` instead of `"description"`. Users saw "Security scan found N issue(s)" with a blank findings section.
+- **scan_skill.py Windows portability**: `os.O_NOFOLLOW` caused `AttributeError` crash on Windows where the flag doesn't exist. Now guarded with `hasattr()` check; falls back to `is_symlink()` pre-check.
+
+### Security
+- All 20 findings from [@ben-alkov](https://github.com/ben-alkov)'s security analysis are now fully closed, including the M2 homoglyph evasion that was previously only detected but not neutralized.
+
+### Credits
+- Massive thanks to **[@ben-alkov](https://github.com/ben-alkov)** (Ben Alkov) for an outstanding security contribution: full Claude Code-driven security analysis of `scan_skill.py`, a detailed remediation work plan, 18 atomic commits addressing 20 security findings across 4 severity levels, comprehensive test suite (62 tests), and a final code review by a separate Claude Code instance. This work transformed the scanner from a baseline pattern matcher into a hardened security tool with defense-in-depth against symlink traversal, resource exhaustion, ANSI injection, scanner evasion via dotfiles/continuations/homoglyphs/unclosed comments, and expanded detection coverage for credentials and dangerous URIs. The collaboration — initiated via a Slack message offering unsolicited security help — exemplifies the best of open-source community contribution.
+
+## [1.4.2] - 2026-02-10
+
+### Fixed
+- install_skill.py severity case mismatch and field name mismatch (see v1.5.0 for details).
+- scan_skill.py O_NOFOLLOW Windows portability (see v1.5.0 for details).
+
+### Added
+- SECURITY.md initial creation.
+- Updated README.md, CLAUDE.md with security scanning docs.
+
+## [1.4.1] - 2026-02-10
+
+### Fixed
+- Address ClawHub security review: declare runtime requirements (`python3`, `curl`), primary env var (`SKILLSMP_API_KEY`), and `disable-model-invocation` in YAML frontmatter metadata.
+- Add `homepage` field to frontmatter.
+- Add security note for API key handling in ZIP packaging.
+- Remove `save_memory` reference.
+
 ## [1.4.0] - 2026-02-09
 
 ### Added

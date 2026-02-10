@@ -29,7 +29,7 @@ If you discover a security vulnerability in the Universal Skills Manager, please
 
 ## Security Architecture
 
-### Security Scanner (`scan_skill.py` v1.1.0)
+### Security Scanner (`scan_skill.py` v1.2.0)
 
 The scanner runs automatically during skill installation and checks for 20+ threat categories:
 
@@ -87,7 +87,7 @@ The scanner runs automatically during skill installation and checks for 20+ thre
 ## Known Limitations
 
 - The scanner uses denylist-based detection (regex pattern matching). An allowlist approach would provide stronger coverage but is not yet implemented.
-- Homoglyph characters are detected but not transliterated before semantic pattern matching -- a Cyrillic-obfuscated "ignore previous instructions" triggers `homoglyph_detected` but may not trigger `instruction_override`.
+- Homoglyph transliteration covers common Cyrillic-to-Latin substitutions. Other scripts (Greek, Armenian, etc.) are not yet covered.
 - The `sk-` API key pattern (`sk-[a-zA-Z0-9]{20,}`) may produce false positives on legitimate strings with that prefix.
 
 ## Acknowledgments

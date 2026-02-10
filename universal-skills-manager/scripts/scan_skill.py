@@ -34,7 +34,7 @@ import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 
 MAX_FILE_SIZE = 10_000_000  # 10 MB
 MAX_FILE_COUNT = 1000
@@ -56,25 +56,26 @@ def _join_continuation_lines(lines):
     """Join lines ending with backslash into single logical lines.
 
     Returns list of (logical_line, start_line_number) tuples.
+    Uses list accumulator to avoid quadratic string concatenation.
     """
     result = []
-    current = ""
+    parts = []
     start_num = 1
 
     for i, line in enumerate(lines, start=1):
-        if current == "":
+        if not parts:
             start_num = i
 
         stripped = line.rstrip()
         if stripped.endswith("\\"):
-            current += stripped[:-1] + " "
+            parts.append(stripped[:-1] + " ")
         else:
-            current += line
-            result.append((current, start_num))
-            current = ""
+            parts.append(line)
+            result.append(("".join(parts), start_num))
+            parts.clear()
 
-    if current:
-        result.append((current, start_num))
+    if parts:
+        result.append(("".join(parts), start_num))
 
     return result
 
@@ -288,6 +289,20 @@ _DELIMITER_INJECTION_PATTERNS = [
         r'<</SYS>>',
     ]
 ]
+
+# Homoglyph transliteration map (Cyrillic → ASCII)
+_HOMOGLYPH_MAP = {
+    '\u0430': 'a', '\u0435': 'e', '\u043e': 'o', '\u0440': 'p',
+    '\u0441': 'c', '\u0443': 'y', '\u0445': 'x', '\u0456': 'i',
+    '\u0458': 'j', '\u04bb': 'h', '\u0455': 's', '\u0442': 't',
+}
+_HOMOGLYPH_TRANS = str.maketrans(_HOMOGLYPH_MAP)
+
+
+def _transliterate_homoglyphs(text):
+    """Replace Cyrillic homoglyphs with their ASCII equivalents."""
+    return text.translate(_HOMOGLYPH_TRANS)
+
 
 _CROSS_SKILL_ESCALATION_PATTERNS = [
     re.compile(p, re.IGNORECASE) for p in [
@@ -518,6 +533,16 @@ class SkillScanner:
         self._check_delimiter_injection(lines, file)
         self._check_cross_skill_escalation(lines, file)
 
+        # Second pass: transliterate homoglyphs to ASCII and re-run semantic
+        # checks that homoglyphs are designed to evade. Dedup in _add_finding
+        # prevents duplicate findings when no homoglyphs are present.
+        transliterated = [_transliterate_homoglyphs(line) for line in lines]
+        if transliterated != lines:
+            self._check_instruction_override(transliterated, file)
+            self._check_role_hijacking(transliterated, file)
+            self._check_safety_bypass(transliterated, file)
+            self._check_prompt_extraction(transliterated, file)
+
     def _check_invisible_unicode(self, lines, file):
         """Check for invisible or zero-width unicode characters."""
         # Define all invisible/zero-width Unicode codepoint ranges
@@ -569,20 +594,13 @@ class SkillScanner:
                     recommendation="Remove invisible characters. These can hide malicious instructions from human review.",
                 )
 
-    # Common Cyrillic-to-Latin homoglyphs
-    _HOMOGLYPHS = {
-        '\u0430': 'a', '\u0435': 'e', '\u043e': 'o', '\u0440': 'p',
-        '\u0441': 'c', '\u0443': 'y', '\u0445': 'x', '\u0456': 'i',
-        '\u0458': 'j', '\u04bb': 'h', '\u0455': 's', '\u0442': 't',
-    }
-
     def _check_homoglyphs(self, lines, file):
         """Check for non-ASCII characters that look like ASCII (homoglyphs)."""
         for line_num, line in enumerate(lines, start=1):
             found = []
             for ch in line:
-                if ch in self._HOMOGLYPHS:
-                    found.append(f"U+{ord(ch):04X} (looks like '{self._HOMOGLYPHS[ch]}')")
+                if ch in _HOMOGLYPH_MAP:
+                    found.append(f"U+{ord(ch):04X} (looks like '{_HOMOGLYPH_MAP[ch]}')")
             if found:
                 shown = ", ".join(found[:5])
                 self._add_finding(
