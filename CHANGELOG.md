@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-02-09
+
+### Added
+- ClawHub integration as third search source (5,700+ versioned skills, semantic search, no API key required).
+- Three-source skill discovery: SkillsMP (curated, AI semantic search) + SkillHub (open catalog) + ClawHub (versioned, semantic search).
+- ClawHub semantic/vector search via `/api/v1/search` endpoint with similarity scoring.
+- ClawHub browse/list via `/api/v1/skills` endpoint with cursor pagination and sorting (stars, downloads, trending).
+- Direct file fetch install flow for ClawHub skills (bypasses `install_skill.py`, uses ClawHub's `/file` endpoint + manual `scan_skill.py`).
+- ZIP download fallback for multi-file ClawHub skills via `/download` endpoint.
+- Onboarding flow expanded from A/B to A/B/C choice (SkillsMP / SkillHub / ClawHub).
+- Source labeling extended to include `[ClawHub]` tag in search results.
+- ClawHub API documentation in SKILL.md, README.md, and CLAUDE.md.
+
+### Changed
+- "Search More Sources" generalized to offer all remaining unsearched sources (was SkillHub-only).
+- Cross-source deduplication extended: SkillsMP ↔ SkillHub by ID, ClawHub ↔ others by skill name.
+- Installation sections reorganized: A (SkillsMP), B (SkillHub), C (ClawHub), D (Local Source).
+
 ## [1.3.0] - 2026-02-10
 
 ### Added

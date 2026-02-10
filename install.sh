@@ -112,7 +112,7 @@ What this does:
   2. Detects which AI coding tools you have installed
   3. Downloads the Universal Skills Manager from GitHub
   4. Installs it to all detected tools
-  5. Optionally sets up your SkillsMP API key (SkillHub search works without one)
+  5. Optionally sets up your SkillsMP API key (SkillHub and ClawHub search work without one)
 
 Requirements:
   - Python 3.8 or later
@@ -367,7 +367,7 @@ check_api_key() {
 
     warn "SKILLSMP_API_KEY is not set."
     info "A SkillsMP API key enables curated search with AI semantic matching."
-    info "Without it, you can still search SkillHub's open catalog (173k+ skills, no key needed)."
+    info "Without it, you can still search SkillHub (173k+ skills) and ClawHub (5,700+ versioned skills) — no key needed."
     echo ""
 
     # Skip prompt if non-interactive (piped input)
@@ -404,7 +404,7 @@ check_api_key() {
         info "You can set it later:"
         info "  export SKILLSMP_API_KEY=\"your_key\""
         info "  Add to ~/.zshrc or ~/.bashrc for persistence."
-        info "  Note: SkillHub search works without a key."
+        info "  Note: SkillHub and ClawHub search work without a key."
     fi
 }
 
@@ -431,7 +431,7 @@ show_summary() {
     if [ -z "${SKILLSMP_API_KEY:-}" ]; then
         echo "  ${YELLOW}Tip:${RESET} Set SKILLSMP_API_KEY for curated SkillsMP search (optional)."
         echo "  Get one at: https://skillsmp.com"
-        echo "  SkillHub search (173k+ skills) works without a key."
+        echo "  SkillHub (173k+ skills) and ClawHub (5,700+ versioned skills) work without a key."
         echo ""
     fi
     echo "  Docs: https://github.com/jacob-bd/universal-skills-manager"

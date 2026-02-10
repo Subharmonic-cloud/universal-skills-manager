@@ -7,6 +7,7 @@
 <p align="center">
   <a href="https://skillsmp.com">SkillsMP.com</a> •
   <a href="https://skills.palebluedot.live">SkillHub</a> •
+  <a href="https://clawhub.ai">ClawHub</a> •
   <a href="#quick-start">Quick Start</a> •
   <a href="#features">Features</a> •
   <a href="#supported-tools">Supported Tools</a>
@@ -14,7 +15,7 @@
 
 ---
 
-A centralized skill manager for AI coding assistants. Discovers, installs, and synchronizes skills from multiple sources — [SkillsMP.com](https://skillsmp.com) (curated, AI semantic search) and [SkillHub](https://skills.palebluedot.live) (173k+ community skills, no API key required) — across multiple AI tools including Claude Code, OpenAI Codex, Gemini CLI, and more.
+A centralized skill manager for AI coding assistants. Discovers, installs, and synchronizes skills from multiple sources — [SkillsMP.com](https://skillsmp.com) (curated, AI semantic search), [SkillHub](https://skills.palebluedot.live) (173k+ community skills, no API key required), and [ClawHub](https://clawhub.ai) (5,700+ versioned skills, semantic search, no API key required) — across multiple AI tools including Claude Code, OpenAI Codex, Gemini CLI, and more.
 
 ## Demo
 
@@ -33,7 +34,7 @@ This video covers:
 
 ## Features
 
-- 🔍 **Multi-Source Search**: Find skills from SkillsMP (curated, AI semantic search) and SkillHub (173k+ community catalog, no API key needed)
+- 🔍 **Multi-Source Search**: Find skills from SkillsMP (curated, AI semantic search), SkillHub (173k+ community catalog), and ClawHub (5,700+ versioned skills, semantic search) — no API key needed for SkillHub or ClawHub
 - 📦 **One-Click Install**: Download and validate skills with atomic installation (temp → validate → install)
 - 🔄 **Cross-Tool Sync**: Automatically sync skills across all your installed AI tools
 - 📊 **Skill Matrix Report**: See which skills are installed on which tools at a glance
@@ -140,7 +141,7 @@ python3 path/to/install_skill.py \
 
 ### API Key Setup
 
-The Universal Skills Manager uses a SkillsMP API key for curated search with AI semantic matching. **The API key is optional** — without it, you can still search SkillHub's open catalog of 173k+ community skills.
+The Universal Skills Manager uses a SkillsMP API key for curated search with AI semantic matching. **The API key is optional** — without it, you can still search SkillHub's open catalog of 173k+ community skills and ClawHub's 5,700+ versioned skills with semantic search.
 
 #### Option 1: Shell Profile (Recommended)
 
@@ -236,7 +237,7 @@ Once installed, the skill activates automatically when you:
 "Show me skills for testing"
 ```
 
-The AI will search available sources (SkillsMP and/or SkillHub) and display relevant skills with:
+The AI will search available sources (SkillsMP, SkillHub, and/or ClawHub) and display relevant skills with:
 - Skill name and author
 - Description
 - Star rating
@@ -253,7 +254,7 @@ After search results appear:
 
 The AI will:
 1. Ask whether to install globally or locally
-2. Fetch the skill content from GitHub
+2. Fetch the skill content from GitHub or ClawHub
 3. Detect other installed AI tools
 4. Offer to sync the skill across all tools
 5. Install and confirm success
@@ -275,9 +276,9 @@ The AI will:
 
 ## How It Works
 
-1. **Discovery**: The AI queries multiple sources (SkillsMP.com and/or SkillHub) using keyword or semantic search
+1. **Discovery**: The AI queries multiple sources (SkillsMP.com, SkillHub, and/or ClawHub) using keyword or semantic search
 2. **Selection**: You choose which skill to install from the results
-3. **Fetching**: The AI fetches the SKILL.md content from the skill's GitHub repository
+3. **Fetching**: The AI fetches the SKILL.md content from GitHub or directly from ClawHub
 4. **Installation**: Creates the proper directory structure (`~/.claude/skills/{skill-name}/`)
 5. **Synchronization**: Optionally copies to other detected AI tools
 
@@ -399,6 +400,46 @@ curl -X GET "https://skills.palebluedot.live/api/skills/{id}"
 }
 ```
 
+### ClawHub (Versioned, Semantic Search, No API Key Required)
+
+**Semantic Search**
+```bash
+curl -X GET "https://clawhub.ai/api/v1/search?q=debugging&limit=20"
+```
+
+**Browse by Stars**
+```bash
+curl -X GET "https://clawhub.ai/api/v1/skills?limit=20&sort=stars"
+```
+
+**Get Skill Details**
+```bash
+curl -X GET "https://clawhub.ai/api/v1/skills/{slug}"
+```
+
+**Get Skill File (raw text, NOT JSON)**
+```bash
+curl -X GET "https://clawhub.ai/api/v1/skills/{slug}/file?path=SKILL.md"
+```
+
+**Response Format (Search):**
+```json
+{
+  "results": [
+    {
+      "score": 0.82,
+      "slug": "self-improving-agent",
+      "displayName": "Self-Improving Agent",
+      "summary": "An agent that iteratively improves itself...",
+      "version": "1.0.0",
+      "updatedAt": "2026-01-15T10:30:00Z"
+    }
+  ]
+}
+```
+
+**Key Differences:** ClawHub hosts skill files directly (not on GitHub), uses slug-based identifiers, supports semantic/vector search, and includes explicit version numbers. Rate limit: 120 reads/min per IP.
+
 ## Repository Structure
 
 ```
@@ -414,11 +455,11 @@ universal-skills-manager/
 
 ## Contributing
 
-Skills are sourced from the community via [SkillsMP.com](https://skillsmp.com) and [SkillHub](https://skills.palebluedot.live). To contribute:
+Skills are sourced from the community via [SkillsMP.com](https://skillsmp.com), [SkillHub](https://skills.palebluedot.live), and [ClawHub](https://clawhub.ai). To contribute:
 
 1. Create your skill with proper YAML frontmatter
-2. Host it on GitHub
-3. Submit to SkillsMP.com for curated indexing, or let SkillHub auto-index from GitHub
+2. Host it on GitHub (for SkillsMP/SkillHub) or publish directly to ClawHub
+3. Submit to SkillsMP.com for curated indexing, let SkillHub auto-index from GitHub, or publish via ClawHub's platform
 
 ## License
 
@@ -429,11 +470,12 @@ MIT License - See repository for details
 - **Issues**: Report bugs or request features via [GitHub Issues](https://github.com/jacob-bd/universal-skills-manager/issues)
 - **SkillsMP**: Visit [skillsmp.com](https://skillsmp.com) for curated skill discovery
 - **SkillHub**: Visit [skills.palebluedot.live](https://skills.palebluedot.live) for community skills
+- **ClawHub**: Visit [clawhub.ai](https://clawhub.ai) for versioned skills with semantic search
 - **Documentation**: See `CLAUDE.md` for technical details
 
 ---
 
-**Note**: This skill requires an active internet connection to search SkillsMP.com / SkillHub and fetch skill content from GitHub.
+**Note**: This skill requires an active internet connection to search SkillsMP.com / SkillHub / ClawHub and fetch skill content from GitHub or ClawHub.
 
 ## Acknowledgments
 

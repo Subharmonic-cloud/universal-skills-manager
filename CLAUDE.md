@@ -7,8 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This repository contains the **Universal Skills Manager** skill, which acts as a centralized package manager for AI capabilities across multiple AI coding tools (Gemini CLI, Google Anti-Gravity, OpenCode, Claude Code, Cursor, etc.).
 
 The skill enables:
-- **Discovery**: Searching for skills from multiple sources — SkillsMP.com (curated, AI semantic search) and SkillHub (173k+ community skills, no API key required)
-- **Installation**: Installing skills from GitHub to User-level (global) or Project-level (local) scopes
+- **Discovery**: Searching for skills from multiple sources — SkillsMP.com (curated, AI semantic search), SkillHub (173k+ community skills, no API key required), and ClawHub (5,700+ versioned skills, semantic search, no API key required)
+- **Installation**: Installing skills from GitHub or ClawHub to User-level (global) or Project-level (local) scopes
 - **Synchronization**: Copying/syncing skills across different AI tools
 - **Consistency**: Maintaining version consistency across installed locations
 - **Cloud Packaging**: Creating ready-to-upload ZIP files for claude.ai/Claude Desktop with embedded API keys
@@ -63,13 +63,13 @@ For claude.ai and Claude Desktop, skills must be uploaded as ZIP files through t
 The hybrid API key discovery checks:
 1. `$SKILLSMP_API_KEY` environment variable (Claude Code)
 2. `config.json` in skill directory (claude.ai/Claude Desktop)
-3. Source selection prompt: offer SkillsMP (with key) or SkillHub (no key needed) as fallback
+3. Source selection prompt: offer SkillsMP (with key), SkillHub (no key needed), or ClawHub (no key needed) as fallback
 
 ## Key Concepts
 
 ### Multi-Source Skill Discovery
 
-The skill discovers skills from two sources:
+The skill discovers skills from three sources:
 
 #### SkillsMP API (Primary, Curated)
 
@@ -120,11 +120,43 @@ Skills are stored in GitHub repositories. To get the actual SKILL.md content:
 
 **IMPORTANT:** The `id` field does NOT map to the file path within the repo. Always use the detail endpoint to get the correct `skillPath`.
 
+#### ClawHub API (Tertiary, Versioned)
+
+**Base URL:** `https://clawhub.ai/api/v1`
+
+**Authentication:** None required (open API). Rate limit: 120 reads/min per IP.
+
+**API Endpoints:**
+- **Semantic Search**: `GET /api/v1/search?q={query}&limit=20` — vector/similarity search ranked by `score`
+- **Browse/List**: `GET /api/v1/skills?limit=20&sort=stars|downloads|updated|trending&cursor={cursor}` — cursor-paginated browsing
+- **Detail**: `GET /api/v1/skills/{slug}` — full skill details with owner, version, moderation status
+- **File**: `GET /api/v1/skills/{slug}/file?path=SKILL.md&version={ver}` — raw file content (`text/plain`, NOT JSON)
+- **Download**: `GET /api/v1/download?slug={slug}&version={ver}` — full skill as ZIP
+
+**Response Fields (Search):**
+- `score` (similarity), `slug`, `displayName`, `summary`, `version`, `updatedAt`
+
+**Response Fields (Browse):**
+- `slug`, `displayName`, `summary`, `version`, `stats.stars`, `stats.downloads`
+
+**Content Fetching:**
+ClawHub hosts skill files directly — no GitHub URL construction needed:
+1. Fetch file content: `GET /api/v1/skills/{slug}/file?path=SKILL.md` (returns raw text)
+2. For multi-file skills: `GET /api/v1/download?slug={slug}` (returns ZIP)
+3. Run `scan_skill.py` manually (since `install_skill.py` is bypassed for ClawHub)
+
+**Key Differences from SkillsMP/SkillHub:**
+- Skills identified by `slug` (not GitHub paths)
+- Direct file hosting (no GitHub URL construction)
+- Explicit version numbers on every skill
+- Built-in semantic/vector search
+- VirusTotal integration for security scanning (`moderation` field)
+
 ### Skill Installation Flow
 
 When installing a skill, the manager:
-1. Identifies the source (SkillsMP search result, SkillHub search result, or local file)
-2. Fetches skill content from GitHub (converts tree URL to raw URL)
+1. Identifies the source (SkillsMP search result, SkillHub search result, ClawHub search result, or local file)
+2. Fetches skill content from GitHub (converts tree URL to raw URL) or directly from ClawHub (via `/file` endpoint)
 3. Determines target scope (User/Global vs Project/Local)
 4. Performs a "Sync Check" to detect other installed AI tools
 5. Offers to sync the skill across all detected tools
@@ -135,6 +167,7 @@ When installing a skill, the manager:
 Skills are discovered from multiple sources:
 - **SkillsMP.com** (primary, curated): Keyword search + AI semantic search, requires API key
 - **SkillHub** (secondary, community): Keyword search, no API key required, 173k+ auto-indexed skills
+- **ClawHub** (tertiary, versioned): Semantic/vector search, no API key required, 5,700+ versioned skills
 - **Method**: API calls using curl/bash, parse JSON responses, display results with metadata and source labels
 
 ### Synchronization Logic
@@ -198,10 +231,11 @@ For example, installing "code-debugging" creates:
 
 ## Important Notes
 
-- **API Key Optional**: The `SKILLSMP_API_KEY` environment variable enables SkillsMP search (curated, AI semantic). Without it, SkillHub's open catalog is available as a fallback. See README.md for configuration instructions.
+- **API Key Optional**: The `SKILLSMP_API_KEY` environment variable enables SkillsMP search (curated, AI semantic). Without it, SkillHub's open catalog and ClawHub's versioned catalog are available as fallbacks. See README.md for configuration instructions.
 - **Root Directory Safety**: The install script will abort with exit code 4 if the destination appears to be a root skills directory (contains skills but no SKILL.md). This prevents accidental data loss.
 - **Update Comparison**: When updating an existing skill, the script compares files and shows a diff before overwriting, prompting for confirmation.
 - **No overwriting without confirmation**: Always ask before overwriting existing skills unless "--force" is explicitly used
 - **Structure integrity**: Never dump loose files into the root skills directory; always create a dedicated folder per skill
 - **Cross-platform compatibility**: Some tools (OpenCode, Anti-Gravity) may require additional manifest files generated from SKILL.md frontmatter
-- **GitHub content fetching**: Skills are fetched from GitHub using raw URLs converted from the tree URLs provided by SkillsMP API or constructed from SkillHub detail responses
+- **GitHub content fetching**: Skills from SkillsMP/SkillHub are fetched from GitHub using raw URLs converted from tree URLs. ClawHub skills are fetched directly via ClawHub's `/file` endpoint.
+- **ClawHub install bypass**: ClawHub installs bypass `install_skill.py` (which expects GitHub URLs). Instead, content is fetched via ClawHub's API, saved to a temp directory, scanned with `scan_skill.py` manually, and then copied to the destination.
