@@ -28,6 +28,7 @@ import argparse
 import json
 import os
 import re
+import stat as stat_mod
 import sys
 import unicodedata
 from datetime import datetime, timezone
@@ -381,7 +382,7 @@ class SkillScanner:
         """Read a file, determine its type, and call appropriate check methods."""
         file_path = Path(file_path)
 
-        # Reject symlinks
+        # Reject symlinks (pre-check; O_NOFOLLOW below is the real guard)
         if file_path.is_symlink():
             return
 
@@ -393,26 +394,41 @@ class SkillScanner:
 
         relative = str(file_path.relative_to(base_path))
 
-        # Skip oversized files
+        # Open with O_NOFOLLOW to eliminate TOCTOU between is_symlink and read
         try:
-            file_size = file_path.stat().st_size
-        except OSError:
-            return
-        if file_size > MAX_FILE_SIZE:
+            fd = os.open(str(file_path), os.O_RDONLY | os.O_NOFOLLOW)
+        except (OSError, PermissionError) as exc:
             self.files_scanned.append(relative)
             self._add_finding(
-                severity="warning",
-                category="oversized_file",
+                severity="info",
+                category="unreadable_file",
                 file=relative,
                 line=0,
-                description=f"File exceeds size limit ({file_size:,} bytes > {MAX_FILE_SIZE:,} bytes) — skipped",
+                description=f"File could not be opened: {type(exc).__name__}",
                 matched_text="",
-                recommendation="Investigate why a skill file is this large. Large files may be attempting resource exhaustion.",
+                recommendation="Investigate why this file cannot be opened.",
             )
             return
 
         try:
-            content = file_path.read_text(encoding="utf-8")
+            st = os.fstat(fd)
+            if not stat_mod.S_ISREG(st.st_mode):
+                return  # Not a regular file (pipe, device, etc.)
+            if st.st_size > MAX_FILE_SIZE:
+                self.files_scanned.append(relative)
+                self._add_finding(
+                    severity="warning",
+                    category="oversized_file",
+                    file=relative,
+                    line=0,
+                    description=f"File exceeds size limit ({st.st_size:,} bytes > {MAX_FILE_SIZE:,} bytes) — skipped",
+                    matched_text="",
+                    recommendation="Investigate why a skill file is this large. Large files may be attempting resource exhaustion.",
+                )
+                return
+            with os.fdopen(fd, "r", encoding="utf-8") as f:
+                fd = -1  # fdopen owns the fd now; don't double-close
+                content = f.read()
         except UnicodeDecodeError:
             self.files_scanned.append(relative)
             self._add_finding(
@@ -425,7 +441,7 @@ class SkillScanner:
                 recommendation="Verify this file is expected. Binary files in skill packages are unusual.",
             )
             return
-        except (PermissionError, OSError) as exc:
+        except OSError as exc:
             self.files_scanned.append(relative)
             self._add_finding(
                 severity="info",
@@ -437,6 +453,9 @@ class SkillScanner:
                 recommendation="Investigate why this file is unreadable. Restrictive permissions may hide malicious content.",
             )
             return
+        finally:
+            if fd >= 0:
+                os.close(fd)
 
         content = unicodedata.normalize("NFC", content)
         self.files_scanned.append(relative)

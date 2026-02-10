@@ -343,3 +343,21 @@ def test_depth_limit(scanner, tmp_skill):
         assert not any("deep" in f for f in report["files_scanned"])
     finally:
         scan_skill.MAX_DIR_DEPTH = original
+
+
+# --- Task 4.3: TOCTOU mitigation with fd-based reading (L3) ---
+
+
+def test_regular_file_read_succeeds(scanner, tmp_skill):
+    """Regular files are read and scanned normally."""
+    tmp_skill.add_file("normal.md", "# Normal file\nSafe content\n")
+    report = scanner.scan_path(tmp_skill.base)
+    assert "normal.md" in report["files_scanned"]
+
+
+def test_symlink_rejected_by_open(scanner, tmp_skill, tmp_path):
+    """Symlinks must be rejected even if is_symlink() were bypassed (O_NOFOLLOW)."""
+    real = tmp_skill.add_file("real.md", "safe content")
+    tmp_skill.add_symlink("sneaky.md", real)
+    report = scanner.scan_path(tmp_skill.base)
+    assert "sneaky.md" not in report["files_scanned"]
