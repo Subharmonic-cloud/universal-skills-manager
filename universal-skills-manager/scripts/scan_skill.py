@@ -521,6 +521,18 @@ class SkillScanner:
                 else:
                     comment_content += "\n" + line
 
+        # Detect unclosed comment at end of file
+        if in_comment:
+            self._add_finding(
+                severity="critical",
+                category="html_comment_unclosed",
+                file=file,
+                line=comment_start_line,
+                description="Unclosed HTML comment — all content after this point is invisible to rendered markdown and may hide malicious instructions",
+                matched_text=comment_content.strip()[:120],
+                recommendation="Close the HTML comment with '-->'. Unclosed comments hide all subsequent content from human review.",
+            )
+
     def _check_encoded_content(self, lines, file):
         """Check for base64 or other encoded content that may hide payloads."""
         patterns = [
