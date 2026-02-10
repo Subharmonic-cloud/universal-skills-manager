@@ -112,7 +112,11 @@ class SkillScanner:
 
     def scan_path(self, path):
         """Scan a file or directory and return a JSON-serializable report dict."""
+        self.findings = []
+        self.files_scanned = []
+
         path = Path(path).resolve()
+        display_path = path.name  # Just the directory/file name
 
         if path.is_file():
             self._scan_file(path, path.parent)
@@ -125,7 +129,7 @@ class SkillScanner:
             print(f"Error: path does not exist: {path}", file=sys.stderr)
             sys.exit(1)
 
-        return self._build_report(str(path))
+        return self._build_report(display_path)
 
     def _scan_file(self, file_path, base_path):
         """Read a file, determine its type, and call appropriate check methods."""
