@@ -281,3 +281,31 @@ def test_git_directory_skipped(scanner, tmp_skill):
     tmp_skill.add_file("SKILL.md", "safe content")
     report = scanner.scan_path(tmp_skill.base)
     assert not any(".git" in f for f in report["files_scanned"])
+
+
+# --- Task 4.1: Report unreadable/binary files (L1) ---
+
+import stat
+
+
+def test_unreadable_file_produces_finding(scanner, tmp_skill):
+    """Files that can't be read must produce an info-level finding."""
+    p = tmp_skill.add_file("locked.md", "secret content")
+    p.chmod(0o000)
+    try:
+        report = scanner.scan_path(tmp_skill.base)
+        unreadable = [f for f in report["findings"] if f["category"] == "unreadable_file"]
+        assert len(unreadable) == 1
+        assert unreadable[0]["severity"] == "info"
+    finally:
+        p.chmod(stat.S_IRUSR | stat.S_IWUSR)  # Restore for cleanup
+
+
+def test_binary_file_produces_finding(scanner, tmp_skill):
+    """Binary (non-UTF-8) files must produce an info-level finding."""
+    p = tmp_skill.add_file("image.md", "placeholder")
+    p.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\xff\xfe" * 50)
+    report = scanner.scan_path(tmp_skill.base)
+    binary = [f for f in report["findings"] if f["category"] == "binary_file"]
+    assert len(binary) == 1
+    assert binary[0]["severity"] == "info"

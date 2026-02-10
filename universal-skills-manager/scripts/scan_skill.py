@@ -387,7 +387,29 @@ class SkillScanner:
 
         try:
             content = file_path.read_text(encoding="utf-8")
-        except (UnicodeDecodeError, PermissionError, OSError):
+        except UnicodeDecodeError:
+            self.files_scanned.append(relative)
+            self._add_finding(
+                severity="info",
+                category="binary_file",
+                file=relative,
+                line=0,
+                description="Binary or non-UTF-8 file detected",
+                matched_text="",
+                recommendation="Verify this file is expected. Binary files in skill packages are unusual.",
+            )
+            return
+        except (PermissionError, OSError) as exc:
+            self.files_scanned.append(relative)
+            self._add_finding(
+                severity="info",
+                category="unreadable_file",
+                file=relative,
+                line=0,
+                description=f"File could not be read: {type(exc).__name__}",
+                matched_text="",
+                recommendation="Investigate why this file is unreadable. Restrictive permissions may hide malicious content.",
+            )
             return
 
         content = unicodedata.normalize("NFC", content)
