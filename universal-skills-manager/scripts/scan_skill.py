@@ -36,6 +36,17 @@ VERSION = "1.0.0"
 
 MAX_FILE_SIZE = 10_000_000  # 10 MB
 
+_SCRIPT_EXTENSIONS = frozenset({
+    ".py", ".sh", ".bash", ".js", ".mjs", ".cjs", ".ts", ".tsx",
+    ".rb", ".pl", ".lua", ".ps1", ".bat", ".cmd",
+})
+_CONFIG_EXTENSIONS = frozenset({
+    ".json", ".yaml", ".yml", ".toml", ".ini", ".cfg", ".env",
+})
+_BUILD_BASENAMES = frozenset({
+    "Makefile", "Dockerfile", "Jenkinsfile", "Containerfile",
+})
+
 _ANSI_ESCAPE_RE = re.compile(
     r'\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07]*(?:\x07|\x1b\\)|\x1b[()][A-B0-2]'
 )
@@ -139,20 +150,22 @@ class SkillScanner:
         # All files: invisible unicode check
         self._check_invisible_unicode(lines, relative)
 
+        basename = file_path.name
+
         # Markdown files: all categories
         if suffix == ".md":
             self._check_all_categories(lines, relative)
 
-        # Script files: subset of checks
-        elif suffix in (".py", ".sh", ".bash"):
+        # Script files: execution-relevant checks
+        elif suffix in _SCRIPT_EXTENSIONS or basename in _BUILD_BASENAMES:
             self._check_exfiltration_urls(lines, relative)
             self._check_credential_references(lines, relative)
             self._check_command_execution(lines, relative)
             self._check_shell_pipe_execution(lines, relative)
             self._check_encoded_content(lines, relative)
 
-        # Config files: subset of checks
-        elif suffix in (".json", ".yaml", ".yml"):
+        # Config files: credential and exfiltration checks
+        elif suffix in _CONFIG_EXTENSIONS:
             self._check_exfiltration_urls(lines, relative)
             self._check_credential_references(lines, relative)
             self._check_encoded_content(lines, relative)
