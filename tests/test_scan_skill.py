@@ -262,3 +262,22 @@ def test_scan_performance_regression(scanner, tmp_skill):
     scanner.scan_path(tmp_skill.base)
     elapsed = time.monotonic() - start
     assert elapsed < 10.0, f"Scan took {elapsed:.2f}s for 100 files"
+
+
+# --- Task 3.4: Dotfile scanning with safe-list exclusions (M5) ---
+
+
+def test_dotfiles_scanned_except_safe_dirs(scanner, tmp_skill):
+    """Dotfiles must be scanned. Only .git/ directory is skipped."""
+    tmp_skill.add_file(".evil.py", "eval('malicious')")
+    report = scanner.scan_path(tmp_skill.base)
+    assert ".evil.py" in report["files_scanned"]
+    assert any(f["category"] == "command_execution" for f in report["findings"])
+
+
+def test_git_directory_skipped(scanner, tmp_skill):
+    """The .git directory must be skipped entirely."""
+    tmp_skill.add_file(".git/config", "some git config")
+    tmp_skill.add_file("SKILL.md", "safe content")
+    report = scanner.scan_path(tmp_skill.base)
+    assert not any(".git" in f for f in report["files_scanned"])

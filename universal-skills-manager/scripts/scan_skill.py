@@ -47,6 +47,7 @@ _CONFIG_EXTENSIONS = frozenset({
 _BUILD_BASENAMES = frozenset({
     "Makefile", "Dockerfile", "Jenkinsfile", "Containerfile",
 })
+_SKIP_DIRS = frozenset({".git", ".svn", ".hg", "__pycache__", "node_modules"})
 
 def _join_continuation_lines(lines):
     """Join lines ending with backslash into single logical lines.
@@ -339,7 +340,8 @@ class SkillScanner:
         if path.is_file():
             self._scan_file(path, path.parent)
         elif path.is_dir():
-            for root, _dirs, files in os.walk(path, followlinks=False):
+            for root, dirs, files in os.walk(path, followlinks=False):
+                dirs[:] = [d for d in dirs if d not in _SKIP_DIRS]
                 for fname in sorted(files):
                     file_path = Path(root) / fname
                     self._scan_file(file_path, path)
@@ -364,10 +366,6 @@ class SkillScanner:
             return
 
         relative = str(file_path.relative_to(base_path))
-
-        # Skip binary files and hidden files
-        if file_path.name.startswith("."):
-            return
 
         # Skip oversized files
         try:
