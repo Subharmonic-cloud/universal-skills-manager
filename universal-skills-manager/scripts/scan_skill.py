@@ -28,11 +28,277 @@ import argparse
 import json
 import os
 import re
+import stat as stat_mod
 import sys
+import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
+
+MAX_FILE_SIZE = 10_000_000  # 10 MB
+MAX_FILE_COUNT = 1000
+MAX_DIR_DEPTH = 10
+
+_SCRIPT_EXTENSIONS = frozenset({
+    ".py", ".sh", ".bash", ".js", ".mjs", ".cjs", ".ts", ".tsx",
+    ".rb", ".pl", ".lua", ".ps1", ".bat", ".cmd",
+})
+_CONFIG_EXTENSIONS = frozenset({
+    ".json", ".yaml", ".yml", ".toml", ".ini", ".cfg", ".env",
+})
+_BUILD_BASENAMES = frozenset({
+    "Makefile", "Dockerfile", "Jenkinsfile", "Containerfile",
+})
+_SKIP_DIRS = frozenset({".git", ".svn", ".hg", "__pycache__", "node_modules"})
+
+def _join_continuation_lines(lines):
+    """Join lines ending with backslash into single logical lines.
+
+    Returns list of (logical_line, start_line_number) tuples.
+    """
+    result = []
+    current = ""
+    start_num = 1
+
+    for i, line in enumerate(lines, start=1):
+        if current == "":
+            start_num = i
+
+        stripped = line.rstrip()
+        if stripped.endswith("\\"):
+            current += stripped[:-1] + " "
+        else:
+            current += line
+            result.append((current, start_num))
+            current = ""
+
+    if current:
+        result.append((current, start_num))
+
+    return result
+
+
+_ANSI_ESCAPE_RE = re.compile(
+    r'\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07]*(?:\x07|\x1b\\)|\x1b[()][A-B0-2]'
+)
+
+# --- Module-level compiled regex patterns ---
+
+_EXFILTRATION_URL_PATTERNS = [
+    (
+        re.compile(r'!\[.*?\]\(https?://[^)]*[\$\{]', re.IGNORECASE),
+        "Markdown image with variable interpolation — may exfiltrate data via URL",
+    ),
+    (
+        re.compile(r'<img\s[^>]*src\s*=\s*["\']https?://', re.IGNORECASE),
+        "HTML img tag with external URL — may load tracking pixel or exfiltrate data",
+    ),
+    (
+        re.compile(r'!\[.*?\]\(https?://[^)]*\?[^)]*=', re.IGNORECASE),
+        "Markdown image with query parameters — may exfiltrate data via URL parameters",
+    ),
+    (
+        re.compile(r'!\[.*?\]\(data:', re.IGNORECASE),
+        "Markdown image with data URI — may contain embedded malicious payload",
+    ),
+    (
+        re.compile(r'!\[.*?\]\(//[^)]+', re.IGNORECASE),
+        "Markdown image with protocol-relative URL — may exfiltrate data",
+    ),
+    (
+        re.compile(r'href\s*=\s*["\']javascript:', re.IGNORECASE),
+        "JavaScript URI in link — arbitrary code execution risk",
+    ),
+    (
+        re.compile(r'src\s*=\s*["\']data:', re.IGNORECASE),
+        "Data URI in src attribute — may contain embedded malicious payload",
+    ),
+]
+
+_SHELL_PIPE_PATTERN = re.compile(
+    r'(curl|wget)\s+[^|]*\|\s*(bash|sh|zsh|python[23]?|perl|ruby|node)',
+    re.IGNORECASE,
+)
+
+_CREDENTIAL_PATH_PATTERNS = [
+    re.compile(p, re.IGNORECASE) for p in [
+        r'~/\.ssh/',
+        r'~/\.aws/',
+        r'~/\.gnupg/',
+        r'~/\.env\b',
+        r'\.credentials',
+        r'id_rsa',
+        r'id_ed25519',
+        r'id_ecdsa',
+        r'\.pem\b',
+        r'\.key\b',
+        r'/etc/passwd',
+        r'/etc/shadow',
+    ]
+]
+
+_CREDENTIAL_ENV_PATTERNS = [
+    re.compile(p, re.IGNORECASE) for p in [
+        r'\$\{?GITHUB_TOKEN\}?',
+        r'\$\{?OPENAI_API_KEY\}?',
+        r'\$\{?ANTHROPIC_API_KEY\}?',
+        r'\$\{?AWS_SECRET_ACCESS_KEY\}?',
+        r'\$\{?AWS_ACCESS_KEY_ID\}?',
+        r'\$\{?DATABASE_URL\}?',
+        r'\$\{?DB_PASSWORD\}?',
+        r'\$\{?SECRET_KEY\}?',
+        r'\$\{?PRIVATE_KEY\}?',
+        r'\$\{?API_SECRET\}?',
+        r'\$\{?GOOGLE_API_KEY\}?',
+        r'\$\{?STRIPE_SECRET\}?',
+        r'\$\{?AZURE_CLIENT_SECRET\}?',
+        r'\$\{?AZURE_TENANT_ID\}?',
+        r'\$\{?SLACK_TOKEN\}?',
+        r'\$\{?SLACK_WEBHOOK_URL\}?',
+        r'\$\{?SLACK_BOT_TOKEN\}?',
+        r'\$\{?SENDGRID_API_KEY\}?',
+        r'\$\{?NPM_TOKEN\}?',
+        r'\$\{?NODE_AUTH_TOKEN\}?',
+        r'\$\{?GITLAB_TOKEN\}?',
+        r'\$\{?CI_JOB_TOKEN\}?',
+        r'\$\{?HEROKU_API_KEY\}?',
+        r'\$\{?DIGITALOCEAN_TOKEN\}?',
+        r'\$\{?TWILIO_AUTH_TOKEN\}?',
+        r'\$\{?DATADOG_API_KEY\}?',
+        r'\$\{?SENTRY_AUTH_TOKEN\}?',
+        r'\$\{?CIRCLECI_TOKEN\}?',
+        r'\$\{?DOCKER_PASSWORD\}?',
+        r'\$\{?CLOUDFLARE_API_TOKEN\}?',
+        r'\$\{?TERRAFORM_TOKEN\}?',
+    ]
+]
+
+_HARDCODED_SECRET_PATTERNS = [
+    (re.compile(r'AKIA[A-Z0-9]{16}'), "AWS access key ID"),
+    (re.compile(r'ghp_[A-Za-z0-9]{36,}'), "GitHub personal access token"),
+    (re.compile(r'gho_[A-Za-z0-9]{36,}'), "GitHub OAuth token"),
+    (re.compile(r'ghu_[A-Za-z0-9]{36,}'), "GitHub user-to-server token"),
+    (re.compile(r'ghs_[A-Za-z0-9]{36,}'), "GitHub server-to-server token"),
+    (re.compile(r'github_pat_[A-Za-z0-9_]{22,}'), "GitHub fine-grained PAT"),
+    (re.compile(r'sk-[a-zA-Z0-9]{20,}'), "OpenAI/generic API key"),
+    (re.compile(r'xox[baprs]-[0-9]{10,13}-[0-9A-Za-z-]+'), "Slack token"),
+    (re.compile(r'-----BEGIN\s+(RSA\s+|OPENSSH\s+|EC\s+)?PRIVATE\s+KEY-----'), "Private key block"),
+    (re.compile(r'eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+'), "JWT token"),
+]
+
+_EXTERNAL_URL_PATTERNS = [
+    re.compile(p, re.IGNORECASE) for p in [
+        r'\bcurl\s+.*https?://',
+        r'\bwget\s+.*https?://',
+        r'\bfetch\s*\(\s*["\']https?://',
+        r'\brequests?\.(get|post|put|delete)\s*\(',
+        r'\bhttp\.(get|post|put|delete)\s*\(',
+        r'\burllib\.request',
+    ]
+]
+
+_COMMAND_EXECUTION_PATTERNS = [
+    re.compile(p, re.IGNORECASE) for p in [
+        r'\beval\s*\(',
+        r'\bexec\s*\(',
+        r'\bos\.system\s*\(',
+        r'\bsubprocess\.(run|call|Popen|check_output)\s*\(',
+        r'\bsh\s+-c\s+',
+        r'\bbash\s+-c\s+',
+        r'\bRuntime\.exec\s*\(',
+        r'\bos\.popen\s*\(',
+        r'\bcommands\.getoutput\s*\(',
+    ]
+]
+
+_INSTRUCTION_OVERRIDE_PATTERNS = [
+    re.compile(p, re.IGNORECASE) for p in [
+        r'ignore\s+(all\s+)?previous\s+instructions?',
+        r'disregard\s+(all\s+)?(previous\s+|prior\s+)?instructions?',
+        r'disregard\s+(all\s+)?(previous\s+|prior\s+)?directives?',
+        r'forget\s+(all\s+)?(previous\s+|everything\s+)',
+        r'new\s+instructions?\s+(follow|are|:)',
+        r'override\s+(all\s+)?previous\s+instructions?',
+        r'cancel\s+(all\s+)?prior\s+instructions?',
+        r'your\s+(new|updated)\s+instructions?\s+(are|:)',
+        r'do\s+not\s+follow\s+(your\s+)?(original|previous)',
+    ]
+]
+
+_ROLE_HIJACKING_PATTERNS = [
+    re.compile(p, re.IGNORECASE) for p in [
+        r'you\s+are\s+now\s+(?!going|ready|able|seeing|in\s+the|connected|running|using|looking|inside|logged)',
+        r'act\s+as\s+(if\s+)?(you\s+are|an?\s+)',
+        r'pretend\s+(to\s+be|you\s+are)',
+        r'assume\s+the\s+role\s+of',
+        r'enter\s+developer\s+mode',
+        r'\bDAN\s+mode\b',
+        r'unrestricted\s+mode',
+        r'you\s+have\s+no\s+restrictions',
+        r'enable\s+jailbreak',
+        r'you\s+are\s+no\s+longer\s+bound',
+    ]
+]
+
+_SAFETY_BYPASS_PATTERNS = [
+    re.compile(p, re.IGNORECASE) for p in [
+        r'bypass\s+(safety|security|filter|restriction)',
+        r'disable\s+(content\s+)?filter',
+        r'remove\s+(all\s+)?restrictions?',
+        r'ignore\s+safety\s+protocols?',
+        r'without\s+(any\s+)?restrictions?',
+        r'system\s+override',
+        r'no\s+ethical\s+guidelines',
+        r'disregard\s+(any\s+)?filters?',
+        r'turn\s+off\s+(safety|content\s+filter)',
+    ]
+]
+
+_ENCODED_CONTENT_PATTERNS = [
+    (re.compile(r'[A-Za-z0-9+/]{40,}={0,2}'), "Long base64-encoded string detected"),
+    (re.compile(r'(?:\\x[0-9a-fA-F]{2}){4,}'), "Hex escape sequences detected"),
+    (re.compile(r'(?:\\u[0-9a-fA-F]{4}){3,}'), "Unicode escape sequences detected"),
+    (re.compile(r'(?:&#x?[0-9a-fA-F]+;){3,}'), "HTML entity sequences detected"),
+    (re.compile(r'(?:%[0-9a-fA-F]{2}){6,}'), "URL-encoded sequences detected"),
+]
+
+_PROMPT_EXTRACTION_PATTERNS = [
+    re.compile(p, re.IGNORECASE) for p in [
+        r'reveal\s+(your\s+)?system\s+prompt',
+        r'show\s+(me\s+)?your\s+instructions',
+        r'print\s+(your\s+)?(initial\s+)?prompt',
+        r'output\s+your\s+(configuration|instructions)',
+        r'what\s+(were\s+you|are\s+your)\s+(told|instructions)',
+        r'repeat\s+the\s+(above|previous)\s+text',
+        r'display\s+(your\s+)?(system\s+)?(prompt|instructions)',
+    ]
+]
+
+_DELIMITER_INJECTION_PATTERNS = [
+    re.compile(p) for p in [
+        r'<\|system\|>',
+        r'<\|user\|>',
+        r'<\|assistant\|>',
+        r'<\|im_start\|>',
+        r'<\|im_end\|>',
+        r'\[INST\]',
+        r'\[/INST\]',
+        r'<<SYS>>',
+        r'<</SYS>>',
+    ]
+]
+
+_CROSS_SKILL_ESCALATION_PATTERNS = [
+    re.compile(p, re.IGNORECASE) for p in [
+        r'install\s+(this\s+|the\s+)?skill\s+from\s+https?://',
+        r'download\s+(this\s+|the\s+)?skill\s+from',
+        r'fetch\s+(this\s+|the\s+)?(skill|extension)\s+from',
+        r'add\s+(this\s+)?to\s+~/\.(claude|gemini|cursor|codex|roo)',
+        r'cp\s+.*\s+~/\.(claude|gemini|cursor|codex|roo)/(skills|extensions)',
+        r'git\s+clone\s+.*\s+~/\.(claude|gemini|cursor|codex)',
+    ]
+]
 
 
 class Finding:
@@ -68,35 +334,130 @@ class SkillScanner:
 
     def scan_path(self, path):
         """Scan a file or directory and return a JSON-serializable report dict."""
+        self.findings = []
+        self.files_scanned = []
+
         path = Path(path).resolve()
+        display_path = path.name  # Just the directory/file name
 
         if path.is_file():
             self._scan_file(path, path.parent)
         elif path.is_dir():
-            for root, _dirs, files in os.walk(path):
+            file_count = 0
+            limit_reached = False
+            for root, dirs, files in os.walk(path, followlinks=False):
+                dirs[:] = [d for d in dirs if d not in _SKIP_DIRS]
+
+                # Depth limit
+                depth = len(Path(root).relative_to(path).parts)
+                if depth >= MAX_DIR_DEPTH:
+                    dirs.clear()
+                    continue
+
                 for fname in sorted(files):
+                    if file_count >= MAX_FILE_COUNT:
+                        self._add_finding(
+                            severity="warning",
+                            category="scan_limit_reached",
+                            file="(scan)",
+                            line=0,
+                            description=f"File count limit reached ({MAX_FILE_COUNT}). Remaining files not scanned.",
+                            matched_text="",
+                            recommendation="Skill packages with this many files are suspicious. Review manually.",
+                        )
+                        limit_reached = True
+                        break
                     file_path = Path(root) / fname
                     self._scan_file(file_path, path)
+                    file_count += 1
+                if limit_reached:
+                    break
         else:
             print(f"Error: path does not exist: {path}", file=sys.stderr)
             sys.exit(1)
 
-        return self._build_report(str(path))
+        return self._build_report(display_path)
 
     def _scan_file(self, file_path, base_path):
         """Read a file, determine its type, and call appropriate check methods."""
         file_path = Path(file_path)
+
+        # Reject symlinks (pre-check; O_NOFOLLOW below is the real guard)
+        if file_path.is_symlink():
+            return
+
+        # Validate resolved path stays within base directory
+        try:
+            file_path.resolve().relative_to(base_path.resolve())
+        except ValueError:
+            return
+
         relative = str(file_path.relative_to(base_path))
 
-        # Skip binary files and hidden files
-        if file_path.name.startswith("."):
+        # Open with O_NOFOLLOW to eliminate TOCTOU between is_symlink and read
+        try:
+            fd = os.open(str(file_path), os.O_RDONLY | os.O_NOFOLLOW)
+        except (OSError, PermissionError) as exc:
+            self.files_scanned.append(relative)
+            self._add_finding(
+                severity="info",
+                category="unreadable_file",
+                file=relative,
+                line=0,
+                description=f"File could not be opened: {type(exc).__name__}",
+                matched_text="",
+                recommendation="Investigate why this file cannot be opened.",
+            )
             return
 
         try:
-            content = file_path.read_text(encoding="utf-8")
-        except (UnicodeDecodeError, PermissionError, OSError):
+            st = os.fstat(fd)
+            if not stat_mod.S_ISREG(st.st_mode):
+                return  # Not a regular file (pipe, device, etc.)
+            if st.st_size > MAX_FILE_SIZE:
+                self.files_scanned.append(relative)
+                self._add_finding(
+                    severity="warning",
+                    category="oversized_file",
+                    file=relative,
+                    line=0,
+                    description=f"File exceeds size limit ({st.st_size:,} bytes > {MAX_FILE_SIZE:,} bytes) — skipped",
+                    matched_text="",
+                    recommendation="Investigate why a skill file is this large. Large files may be attempting resource exhaustion.",
+                )
+                return
+            with os.fdopen(fd, "r", encoding="utf-8") as f:
+                fd = -1  # fdopen owns the fd now; don't double-close
+                content = f.read()
+        except UnicodeDecodeError:
+            self.files_scanned.append(relative)
+            self._add_finding(
+                severity="info",
+                category="binary_file",
+                file=relative,
+                line=0,
+                description="Binary or non-UTF-8 file detected",
+                matched_text="",
+                recommendation="Verify this file is expected. Binary files in skill packages are unusual.",
+            )
             return
+        except OSError as exc:
+            self.files_scanned.append(relative)
+            self._add_finding(
+                severity="info",
+                category="unreadable_file",
+                file=relative,
+                line=0,
+                description=f"File could not be read: {type(exc).__name__}",
+                matched_text="",
+                recommendation="Investigate why this file is unreadable. Restrictive permissions may hide malicious content.",
+            )
+            return
+        finally:
+            if fd >= 0:
+                os.close(fd)
 
+        content = unicodedata.normalize("NFC", content)
         self.files_scanned.append(relative)
         lines = content.splitlines()
         suffix = file_path.suffix.lower()
@@ -104,29 +465,44 @@ class SkillScanner:
         # All files: invisible unicode check
         self._check_invisible_unicode(lines, relative)
 
+        basename = file_path.name
+
         # Markdown files: all categories
         if suffix == ".md":
             self._check_all_categories(lines, relative)
 
-        # Script files: subset of checks
-        elif suffix in (".py", ".sh", ".bash"):
+        # Script files: execution-relevant checks
+        elif suffix in _SCRIPT_EXTENSIONS or basename in _BUILD_BASENAMES:
             self._check_exfiltration_urls(lines, relative)
             self._check_credential_references(lines, relative)
+            self._check_hardcoded_secrets(lines, relative)
+            self._check_homoglyphs(lines, relative)
             self._check_command_execution(lines, relative)
             self._check_shell_pipe_execution(lines, relative)
             self._check_encoded_content(lines, relative)
 
-        # Config files: subset of checks
-        elif suffix in (".json", ".yaml", ".yml"):
+        # Config files: credential and exfiltration checks
+        elif suffix in _CONFIG_EXTENSIONS:
             self._check_exfiltration_urls(lines, relative)
             self._check_credential_references(lines, relative)
+            self._check_hardcoded_secrets(lines, relative)
             self._check_encoded_content(lines, relative)
+
+        # Multi-line detection pass on joined continuation lines
+        if suffix in _SCRIPT_EXTENSIONS or basename in _BUILD_BASENAMES or suffix == ".md":
+            joined = _join_continuation_lines(lines)
+            joined_text = [line for line, _ in joined]
+            joined_map = [num for _, num in joined]
+            self._check_shell_pipe_execution(joined_text, relative, line_map=joined_map)
+            self._check_command_execution(joined_text, relative, line_map=joined_map)
 
     def _check_all_categories(self, lines, file):
         """Run all check categories against the given lines (used for .md files)."""
         self._check_exfiltration_urls(lines, file)
         self._check_shell_pipe_execution(lines, file)
         self._check_credential_references(lines, file)
+        self._check_hardcoded_secrets(lines, file)
+        self._check_homoglyphs(lines, file)
         self._check_external_url_references(lines, file)
         self._check_command_execution(lines, file)
         self._check_instruction_override(lines, file)
@@ -189,27 +565,36 @@ class SkillScanner:
                     recommendation="Remove invisible characters. These can hide malicious instructions from human review.",
                 )
 
+    # Common Cyrillic-to-Latin homoglyphs
+    _HOMOGLYPHS = {
+        '\u0430': 'a', '\u0435': 'e', '\u043e': 'o', '\u0440': 'p',
+        '\u0441': 'c', '\u0443': 'y', '\u0445': 'x', '\u0456': 'i',
+        '\u0458': 'j', '\u04bb': 'h', '\u0455': 's', '\u0442': 't',
+    }
+
+    def _check_homoglyphs(self, lines, file):
+        """Check for non-ASCII characters that look like ASCII (homoglyphs)."""
+        for line_num, line in enumerate(lines, start=1):
+            found = []
+            for ch in line:
+                if ch in self._HOMOGLYPHS:
+                    found.append(f"U+{ord(ch):04X} (looks like '{self._HOMOGLYPHS[ch]}')")
+            if found:
+                shown = ", ".join(found[:5])
+                self._add_finding(
+                    severity="warning",
+                    category="homoglyph_detected",
+                    file=file,
+                    line=line_num,
+                    description=f"Homoglyph characters detected: {shown}",
+                    matched_text=line.strip()[:120],
+                    recommendation="Replace look-alike characters with their ASCII equivalents. Homoglyphs can bypass text-based security checks.",
+                )
+
     def _check_exfiltration_urls(self, lines, file):
         """Check for URLs that may exfiltrate data to external servers."""
-        patterns = [
-            (
-                r'!\[.*?\]\(https?://[^)]*[\$\{]',
-                "Markdown image with variable interpolation — may exfiltrate data via URL",
-            ),
-            (
-                r'<img\s[^>]*src\s*=\s*["\']https?://',
-                "HTML img tag with external URL — may load tracking pixel or exfiltrate data",
-            ),
-            (
-                r'!\[.*?\]\(https?://[^)]*\?[^)]*=',
-                "Markdown image with query parameters — may exfiltrate data via URL parameters",
-            ),
-        ]
-
-        compiled = [(re.compile(p, re.IGNORECASE), desc) for p, desc in patterns]
-
         for line_num, line in enumerate(lines, start=1):
-            for regex, description in compiled:
+            for regex, description in _EXFILTRATION_URL_PATTERNS:
                 if regex.search(line):
                     self._add_finding(
                         severity="critical",
@@ -222,15 +607,11 @@ class SkillScanner:
                     )
                     break  # One finding per line
 
-    def _check_shell_pipe_execution(self, lines, file):
+    def _check_shell_pipe_execution(self, lines, file, line_map=None):
         """Check for shell commands piped from remote sources."""
-        pattern = re.compile(
-            r'(curl|wget)\s+[^|]*\|\s*(bash|sh|zsh|python[23]?|perl|ruby|node)',
-            re.IGNORECASE,
-        )
-
-        for line_num, line in enumerate(lines, start=1):
-            match = pattern.search(line)
+        for idx, line in enumerate(lines):
+            line_num = line_map[idx] if line_map else idx + 1
+            match = _SHELL_PIPE_PATTERN.search(line)
             if match:
                 self._add_finding(
                     severity="critical",
@@ -244,40 +625,8 @@ class SkillScanner:
 
     def _check_credential_references(self, lines, file):
         """Check for references to credentials, tokens, or API keys."""
-        path_patterns = [
-            r'~/\.ssh/',
-            r'~/\.aws/',
-            r'~/\.gnupg/',
-            r'~/\.env\b',
-            r'\.credentials',
-            r'id_rsa',
-            r'id_ed25519',
-            r'id_ecdsa',
-            r'\.pem\b',
-            r'\.key\b',
-            r'/etc/passwd',
-            r'/etc/shadow',
-        ]
-        env_patterns = [
-            r'\$\{?GITHUB_TOKEN\}?',
-            r'\$\{?OPENAI_API_KEY\}?',
-            r'\$\{?ANTHROPIC_API_KEY\}?',
-            r'\$\{?AWS_SECRET_ACCESS_KEY\}?',
-            r'\$\{?AWS_ACCESS_KEY_ID\}?',
-            r'\$\{?DATABASE_URL\}?',
-            r'\$\{?DB_PASSWORD\}?',
-            r'\$\{?SECRET_KEY\}?',
-            r'\$\{?PRIVATE_KEY\}?',
-            r'\$\{?API_SECRET\}?',
-            r'\$\{?GOOGLE_API_KEY\}?',
-            r'\$\{?STRIPE_SECRET\}?',
-        ]
-
-        compiled_path = [re.compile(p, re.IGNORECASE) for p in path_patterns]
-        compiled_env = [re.compile(p, re.IGNORECASE) for p in env_patterns]
-
         for line_num, line in enumerate(lines, start=1):
-            for regex in compiled_path:
+            for regex in _CREDENTIAL_PATH_PATTERNS:
                 if regex.search(line):
                     self._add_finding(
                         severity="warning",
@@ -290,7 +639,7 @@ class SkillScanner:
                     )
                     break
             else:
-                for regex in compiled_env:
+                for regex in _CREDENTIAL_ENV_PATTERNS:
                     if regex.search(line):
                         self._add_finding(
                             severity="warning",
@@ -303,21 +652,26 @@ class SkillScanner:
                         )
                         break
 
+    def _check_hardcoded_secrets(self, lines, file):
+        """Check for hardcoded secret values (not env var references)."""
+        for line_num, line in enumerate(lines, start=1):
+            for regex, description in _HARDCODED_SECRET_PATTERNS:
+                if regex.search(line):
+                    self._add_finding(
+                        severity="warning",
+                        category="hardcoded_secret",
+                        file=file,
+                        line=line_num,
+                        description=f"Hardcoded secret detected: {description}",
+                        matched_text=line.strip()[:100],
+                        recommendation="Never hardcode secrets. Use environment variables or a secrets manager.",
+                    )
+                    break
+
     def _check_external_url_references(self, lines, file):
         """Check for external URL references that may fetch untrusted content."""
-        patterns = [
-            r'\bcurl\s+.*https?://',
-            r'\bwget\s+.*https?://',
-            r'\bfetch\s*\(\s*["\']https?://',
-            r'\brequests?\.(get|post|put|delete)\s*\(',
-            r'\bhttp\.(get|post|put|delete)\s*\(',
-            r'\burllib\.request',
-        ]
-
-        compiled = [re.compile(p, re.IGNORECASE) for p in patterns]
-
         for line_num, line in enumerate(lines, start=1):
-            for regex in compiled:
+            for regex in _EXTERNAL_URL_PATTERNS:
                 if regex.search(line):
                     self._add_finding(
                         severity="warning",
@@ -330,24 +684,11 @@ class SkillScanner:
                     )
                     break
 
-    def _check_command_execution(self, lines, file):
+    def _check_command_execution(self, lines, file, line_map=None):
         """Check for dangerous command execution patterns."""
-        patterns = [
-            r'\beval\s*\(',
-            r'\bexec\s*\(',
-            r'\bos\.system\s*\(',
-            r'\bsubprocess\.(run|call|Popen|check_output)\s*\(',
-            r'\bsh\s+-c\s+',
-            r'\bbash\s+-c\s+',
-            r'\bRuntime\.exec\s*\(',
-            r'\bos\.popen\s*\(',
-            r'\bcommands\.getoutput\s*\(',
-        ]
-
-        compiled = [re.compile(p, re.IGNORECASE) for p in patterns]
-
-        for line_num, line in enumerate(lines, start=1):
-            for regex in compiled:
+        for idx, line in enumerate(lines):
+            line_num = line_map[idx] if line_map else idx + 1
+            for regex in _COMMAND_EXECUTION_PATTERNS:
                 if regex.search(line):
                     self._add_finding(
                         severity="warning",
@@ -362,22 +703,8 @@ class SkillScanner:
 
     def _check_instruction_override(self, lines, file):
         """Check for attempts to override system instructions."""
-        patterns = [
-            r'ignore\s+(all\s+)?previous\s+instructions?',
-            r'disregard\s+(all\s+)?(previous\s+|prior\s+)?instructions?',
-            r'disregard\s+(all\s+)?(previous\s+|prior\s+)?directives?',
-            r'forget\s+(all\s+)?(previous\s+|everything\s+)',
-            r'new\s+instructions?\s+(follow|are|:)',
-            r'override\s+(all\s+)?previous\s+instructions?',
-            r'cancel\s+(all\s+)?prior\s+instructions?',
-            r'your\s+(new|updated)\s+instructions?\s+(are|:)',
-            r'do\s+not\s+follow\s+(your\s+)?(original|previous)',
-        ]
-
-        compiled = [re.compile(p, re.IGNORECASE) for p in patterns]
-
         for line_num, line in enumerate(lines, start=1):
-            for regex in compiled:
+            for regex in _INSTRUCTION_OVERRIDE_PATTERNS:
                 if regex.search(line):
                     self._add_finding(
                         severity="warning",
@@ -392,23 +719,8 @@ class SkillScanner:
 
     def _check_role_hijacking(self, lines, file):
         """Check for role/persona hijacking attempts."""
-        patterns = [
-            r'you\s+are\s+now\s+(?!going|ready|able)',
-            r'act\s+as\s+(if\s+)?(you\s+are|an?\s+)',
-            r'pretend\s+(to\s+be|you\s+are)',
-            r'assume\s+the\s+role\s+of',
-            r'enter\s+developer\s+mode',
-            r'\bDAN\s+mode\b',
-            r'unrestricted\s+mode',
-            r'you\s+have\s+no\s+restrictions',
-            r'enable\s+jailbreak',
-            r'you\s+are\s+no\s+longer\s+bound',
-        ]
-
-        compiled = [re.compile(p, re.IGNORECASE) for p in patterns]
-
         for line_num, line in enumerate(lines, start=1):
-            for regex in compiled:
+            for regex in _ROLE_HIJACKING_PATTERNS:
                 if regex.search(line):
                     self._add_finding(
                         severity="warning",
@@ -423,22 +735,8 @@ class SkillScanner:
 
     def _check_safety_bypass(self, lines, file):
         """Check for attempts to bypass safety measures."""
-        patterns = [
-            r'bypass\s+(safety|security|filter|restriction)',
-            r'disable\s+(content\s+)?filter',
-            r'remove\s+(all\s+)?restrictions?',
-            r'ignore\s+safety\s+protocols?',
-            r'without\s+(any\s+)?restrictions?',
-            r'system\s+override',
-            r'no\s+ethical\s+guidelines',
-            r'disregard\s+(any\s+)?filters?',
-            r'turn\s+off\s+(safety|content\s+filter)',
-        ]
-
-        compiled = [re.compile(p, re.IGNORECASE) for p in patterns]
-
         for line_num, line in enumerate(lines, start=1):
-            for regex in compiled:
+            for regex in _SAFETY_BYPASS_PATTERNS:
                 if regex.search(line):
                     self._add_finding(
                         severity="warning",
@@ -468,26 +766,35 @@ class SkillScanner:
                 if start_idx == -1:
                     continue
 
-                # Check if comment closes on the same line
-                end_idx = line.find("-->", start_idx + 4)
-                if end_idx != -1:
-                    # Single-line comment
-                    content = line[start_idx + 4:end_idx].strip()
-                    display = content[:80] if len(content) > 80 else content
-                    self._add_finding(
-                        severity="warning",
-                        category="html_comment",
-                        file=file,
-                        line=line_num,
-                        description=f"HTML comment detected — may contain hidden instructions: {display}",
-                        matched_text=line.strip()[:100],
-                        recommendation="Review HTML comments carefully. They are invisible in rendered markdown and can hide malicious instructions.",
-                    )
-                else:
-                    # Multi-line comment starts
-                    in_comment = True
-                    comment_start_line = line_num
-                    comment_content = line[start_idx + 4:]
+                # Scan for all comments starting from this position
+                rest = line[start_idx:]
+                while True:
+                    end_idx = rest.find("-->", 4)
+                    if end_idx != -1:
+                        # Single-line comment
+                        c = rest[4:end_idx].strip()
+                        d = c[:80] if len(c) > 80 else c
+                        self._add_finding(
+                            severity="warning",
+                            category="html_comment",
+                            file=file,
+                            line=line_num,
+                            description=f"HTML comment detected — may contain hidden instructions: {d}",
+                            matched_text=rest[:end_idx + 3].strip()[:100],
+                            recommendation="Review HTML comments carefully. They are invisible in rendered markdown and can hide malicious instructions.",
+                        )
+                        # Look for another comment in the remainder
+                        rest = rest[end_idx + 3:]
+                        next_start = rest.find("<!--")
+                        if next_start == -1:
+                            break
+                        rest = rest[next_start:]
+                    else:
+                        # Multi-line comment starts
+                        in_comment = True
+                        comment_start_line = line_num
+                        comment_content = rest[4:]
+                        break
             else:
                 # Inside a multi-line comment, look for closing
                 end_idx = line.find("-->")
@@ -507,21 +814,55 @@ class SkillScanner:
                     )
                     in_comment = False
                     comment_content = ""
+                    # Check remainder of line for more comments
+                    remainder = line[end_idx + 3:]
+                    next_start = remainder.find("<!--")
+                    if next_start != -1:
+                        # Re-process from the new comment opening
+                        rest = remainder[next_start:]
+                        while True:
+                            close = rest.find("-->", 4)
+                            if close != -1:
+                                c = rest[4:close].strip()
+                                d = c[:80] if len(c) > 80 else c
+                                self._add_finding(
+                                    severity="warning",
+                                    category="html_comment",
+                                    file=file,
+                                    line=line_num,
+                                    description=f"HTML comment detected — may contain hidden instructions: {d}",
+                                    matched_text=rest[:close + 3].strip()[:100],
+                                    recommendation="Review HTML comments carefully. They are invisible in rendered markdown and can hide malicious instructions.",
+                                )
+                                rest = rest[close + 3:]
+                                ns = rest.find("<!--")
+                                if ns == -1:
+                                    break
+                                rest = rest[ns:]
+                            else:
+                                in_comment = True
+                                comment_start_line = line_num
+                                comment_content = rest[4:]
+                                break
                 else:
                     comment_content += "\n" + line
 
+        # Detect unclosed comment at end of file
+        if in_comment:
+            self._add_finding(
+                severity="critical",
+                category="html_comment_unclosed",
+                file=file,
+                line=comment_start_line,
+                description="Unclosed HTML comment — all content after this point is invisible to rendered markdown and may hide malicious instructions",
+                matched_text=comment_content.strip()[:120],
+                recommendation="Close the HTML comment with '-->'. Unclosed comments hide all subsequent content from human review.",
+            )
+
     def _check_encoded_content(self, lines, file):
         """Check for base64 or other encoded content that may hide payloads."""
-        patterns = [
-            (re.compile(r'[A-Za-z0-9+/]{40,}={0,2}'), "Long base64-encoded string detected"),
-            (re.compile(r'(?:\\x[0-9a-fA-F]{2}){4,}'), "Hex escape sequences detected"),
-            (re.compile(r'(?:\\u[0-9a-fA-F]{4}){3,}'), "Unicode escape sequences detected"),
-            (re.compile(r'(?:&#x?[0-9a-fA-F]+;){3,}'), "HTML entity sequences detected"),
-            (re.compile(r'(?:%[0-9a-fA-F]{2}){6,}'), "URL-encoded sequences detected"),
-        ]
-
         for line_num, line in enumerate(lines, start=1):
-            for regex, description in patterns:
+            for regex, description in _ENCODED_CONTENT_PATTERNS:
                 match = regex.search(line)
                 if match:
                     matched = match.group()
@@ -540,20 +881,8 @@ class SkillScanner:
 
     def _check_prompt_extraction(self, lines, file):
         """Check for attempts to extract system prompts or instructions."""
-        patterns = [
-            r'reveal\s+(your\s+)?system\s+prompt',
-            r'show\s+(me\s+)?your\s+instructions',
-            r'print\s+(your\s+)?(initial\s+)?prompt',
-            r'output\s+your\s+(configuration|instructions)',
-            r'what\s+(were\s+you|are\s+your)\s+(told|instructions)',
-            r'repeat\s+the\s+(above|previous)\s+text',
-            r'display\s+(your\s+)?(system\s+)?(prompt|instructions)',
-        ]
-
-        compiled = [re.compile(p, re.IGNORECASE) for p in patterns]
-
         for line_num, line in enumerate(lines, start=1):
-            for regex in compiled:
+            for regex in _PROMPT_EXTRACTION_PATTERNS:
                 if regex.search(line):
                     self._add_finding(
                         severity="info",
@@ -568,23 +897,8 @@ class SkillScanner:
 
     def _check_delimiter_injection(self, lines, file):
         """Check for delimiter injection attacks."""
-        # Case-sensitive exact token patterns
-        tokens = [
-            r'<\|system\|>',
-            r'<\|user\|>',
-            r'<\|assistant\|>',
-            r'<\|im_start\|>',
-            r'<\|im_end\|>',
-            r'\[INST\]',
-            r'\[/INST\]',
-            r'<<SYS>>',
-            r'<</SYS>>',
-        ]
-
-        compiled = [re.compile(p) for p in tokens]
-
         for line_num, line in enumerate(lines, start=1):
-            for regex in compiled:
+            for regex in _DELIMITER_INJECTION_PATTERNS:
                 match = regex.search(line)
                 if match:
                     self._add_finding(
@@ -600,19 +914,8 @@ class SkillScanner:
 
     def _check_cross_skill_escalation(self, lines, file):
         """Check for attempts to escalate privileges across skills."""
-        patterns = [
-            r'install\s+(this\s+|the\s+)?skill\s+from\s+https?://',
-            r'download\s+(this\s+|the\s+)?skill\s+from',
-            r'fetch\s+(this\s+|the\s+)?(skill|extension)\s+from',
-            r'add\s+(this\s+)?to\s+~/\.(claude|gemini|cursor|codex|roo)',
-            r'cp\s+.*\s+~/\.(claude|gemini|cursor|codex|roo)/(skills|extensions)',
-            r'git\s+clone\s+.*\s+~/\.(claude|gemini|cursor|codex)',
-        ]
-
-        compiled = [re.compile(p, re.IGNORECASE) for p in patterns]
-
         for line_num, line in enumerate(lines, start=1):
-            for regex in compiled:
+            for regex in _CROSS_SKILL_ESCALATION_PATTERNS:
                 if regex.search(line):
                     self._add_finding(
                         severity="info",
@@ -627,13 +930,24 @@ class SkillScanner:
 
     def _add_finding(self, severity, category, file, line, description, matched_text, recommendation):
         """Add a finding to the findings list."""
+        # Deduplicate by file+line+category+description
+        for existing in self.findings:
+            if (existing.file == file and existing.line == line
+                    and existing.category == category
+                    and existing.description == description):
+                return
+        # Strip ANSI escape sequences and control characters
+        sanitized_text = _ANSI_ESCAPE_RE.sub('', matched_text)
+        sanitized_text = ''.join(
+            ch for ch in sanitized_text if ch == '\n' or ch == '\t' or not (0 <= ord(ch) < 32)
+        )
         finding = Finding(
             severity=severity,
             category=category,
             file=file,
             line=line,
             description=description,
-            matched_text=matched_text,
+            matched_text=sanitized_text,
             recommendation=recommendation,
         )
         self.findings.append(finding)
