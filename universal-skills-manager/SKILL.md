@@ -2,15 +2,15 @@
 name: universal-skills-manager
 description: The master coordinator for AI skills. Discovers skills from multiple sources (SkillsMP.com, SkillHub, and ClawHub), manages installation, and synchronization across Claude Code, Gemini CLI, Google Anti-Gravity, OpenCode, and other AI tools. Handles User-level (Global) and Project-level (Local) scopes.
 homepage: https://github.com/jbendavi/universal-skills_mp-manager
+disable-model-invocation: true
 metadata:
   clawdbot:
     requires:
       bins: ["python3", "curl"]
     primaryEnv: SKILLSMP_API_KEY
-    disable-model-invocation: true
 ---
 
-<!-- Version: 1.5.0 -->
+<!-- Version: 1.5.1 -->
 
 # Universal Skills Manager
 
