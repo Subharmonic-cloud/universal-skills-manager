@@ -15,6 +15,8 @@
 
 ---
 
+**v1.4.0** · Three-source skill discovery · 9 supported AI tools · Security scanning built-in
+
 A centralized skill manager for AI coding assistants. Discovers, installs, and synchronizes skills from multiple sources — [SkillsMP.com](https://skillsmp.com) (curated, AI semantic search), [SkillHub](https://skills.palebluedot.live) (173k+ community skills, no API key required), and [ClawHub](https://clawhub.ai) (5,700+ versioned skills, semantic search, no API key required) — across multiple AI tools including Claude Code, OpenAI Codex, Gemini CLI, and more.
 
 ## Demo
@@ -36,8 +38,10 @@ This video covers:
 
 - 🔍 **Multi-Source Search**: Find skills from SkillsMP (curated, AI semantic search), SkillHub (173k+ community catalog), and ClawHub (5,700+ versioned skills, semantic search) — no API key needed for SkillHub or ClawHub
 - 📦 **One-Click Install**: Download and validate skills with atomic installation (temp → validate → install)
+- 🛡️ **Security Scanning**: 14 detection categories across 3 severity levels — catches invisible Unicode, data exfiltration, shell injection, prompt injection, and more
 - 🔄 **Cross-Tool Sync**: Automatically sync skills across all your installed AI tools
 - 📊 **Skill Matrix Report**: See which skills are installed on which tools at a glance
+- ⚡ **One-Liner Installer**: `curl | sh` auto-detects your tools and installs everywhere, with `--tools` flag for targeting specific tools
 - ✅ **Multi-File Validation**: Validates `.py`, `.sh`, `.json`, `.yaml` files during install
 - 🌍 **Global Installation**: User-level skills available across all projects
 - ☁️ **Cloud Upload Packaging**: Create ready-to-upload ZIP files for claude.ai/Claude Desktop
@@ -56,21 +60,44 @@ Findings are displayed with severity levels (Critical/Warning/Info) and you choo
 
 ## Installation
 
-### Step 1: Clone the Repository
+### Option 1: One-Liner Install (Recommended)
+
+Auto-detects your installed AI tools and installs to all of them:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/jacob-bd/universal-skills-manager/main/install.sh | sh
+```
+
+Or install to specific tools only:
+
+```bash
+# Download and run with --tools flag
+curl -fsSL https://raw.githubusercontent.com/jacob-bd/universal-skills-manager/main/install.sh -o /tmp/install.sh
+sh /tmp/install.sh --tools claude,gemini
+```
+
+The installer will:
+1. Check for Python 3.8+
+2. Auto-detect which AI tools you have installed
+3. Download the Universal Skills Manager from GitHub
+4. Install to all detected tools (or just the ones you specify)
+5. Optionally set up your SkillsMP API key
+
+**Supported `--tools` values:** `claude`, `gemini`, `antigravity`, `opencode`, `openclaw`, `codex`, `goose`, `roo`, `cursor`
+
+### Option 2: Manual Install
 
 ```bash
 git clone https://github.com/jacob-bd/universal-skills-manager.git
 cd universal-skills-manager
 ```
 
-### Step 2: Copy to Your AI Tool
-
 Copy the `universal-skills-manager` folder to your tool's skills directory:
 
 | Tool | Global Path |
 |------|-------------|
-| **OpenAI Codex** | `~/.codex/skills/` |
 | **Claude Code** | `~/.claude/skills/` |
+| **OpenAI Codex** | `~/.codex/skills/` |
 | **Gemini CLI** | `~/.gemini/skills/` |
 | **Google Anti-Gravity** | `~/.gemini/antigravity/skills/` |
 | **Cursor** | `~/.cursor/extensions/` |
@@ -81,22 +108,14 @@ Copy the `universal-skills-manager` folder to your tool's skills directory:
 | **claude.ai / Claude Desktop** | `[ZIP upload]` See [instructions below](#claudeai-and-claude-desktop) |
 
 ```bash
-# Example: Install to OpenAI Codex
-cp -r universal-skills-manager ~/.codex/skills/
-
 # Example: Install to Claude Code
 cp -r universal-skills-manager ~/.claude/skills/
 
 # Example: Install to Gemini CLI
 cp -r universal-skills-manager ~/.gemini/skills/
-
-# Example: Install to OpenClaw
-cp -r universal-skills-manager ~/.openclaw/workspace/skills/
 ```
 
-### Step 3: Restart Your AI Assistant
-
-Restart or reload your AI tool to pick up the new skill.
+After installing, restart your AI tool to pick up the new skill.
 
 ## Quick Start
 
@@ -444,13 +463,21 @@ curl -X GET "https://clawhub.ai/api/v1/skills/{slug}/file?path=SKILL.md"
 
 ```
 universal-skills-manager/
+├── install.sh                       # One-liner installer script
 ├── README.md                        # This file
+├── CHANGELOG.md                     # Version history
 ├── CLAUDE.md                        # Claude Code context file
 ├── specs.md                         # Technical specification
+├── assets/
+│   └── mascot.png                   # Project mascot image
+├── docs/
+│   └── SECURITY_SCANNING.md         # Security scanner reference
 └── universal-skills-manager/        # The skill itself
     ├── SKILL.md                     # Skill definition and logic
+    ├── config.json                  # API key config template
     └── scripts/
-        └── install_skill.py         # Helper script for downloading skills
+        ├── install_skill.py         # Helper script for downloading skills
+        └── scan_skill.py            # Security scanner (14 detection categories)
 ```
 
 ## Contributing
