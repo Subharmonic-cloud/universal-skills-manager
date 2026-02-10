@@ -79,6 +79,223 @@ _ANSI_ESCAPE_RE = re.compile(
     r'\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07]*(?:\x07|\x1b\\)|\x1b[()][A-B0-2]'
 )
 
+# --- Module-level compiled regex patterns ---
+
+_EXFILTRATION_URL_PATTERNS = [
+    (
+        re.compile(r'!\[.*?\]\(https?://[^)]*[\$\{]', re.IGNORECASE),
+        "Markdown image with variable interpolation — may exfiltrate data via URL",
+    ),
+    (
+        re.compile(r'<img\s[^>]*src\s*=\s*["\']https?://', re.IGNORECASE),
+        "HTML img tag with external URL — may load tracking pixel or exfiltrate data",
+    ),
+    (
+        re.compile(r'!\[.*?\]\(https?://[^)]*\?[^)]*=', re.IGNORECASE),
+        "Markdown image with query parameters — may exfiltrate data via URL parameters",
+    ),
+    (
+        re.compile(r'!\[.*?\]\(data:', re.IGNORECASE),
+        "Markdown image with data URI — may contain embedded malicious payload",
+    ),
+    (
+        re.compile(r'!\[.*?\]\(//[^)]+', re.IGNORECASE),
+        "Markdown image with protocol-relative URL — may exfiltrate data",
+    ),
+    (
+        re.compile(r'href\s*=\s*["\']javascript:', re.IGNORECASE),
+        "JavaScript URI in link — arbitrary code execution risk",
+    ),
+    (
+        re.compile(r'src\s*=\s*["\']data:', re.IGNORECASE),
+        "Data URI in src attribute — may contain embedded malicious payload",
+    ),
+]
+
+_SHELL_PIPE_PATTERN = re.compile(
+    r'(curl|wget)\s+[^|]*\|\s*(bash|sh|zsh|python[23]?|perl|ruby|node)',
+    re.IGNORECASE,
+)
+
+_CREDENTIAL_PATH_PATTERNS = [
+    re.compile(p, re.IGNORECASE) for p in [
+        r'~/\.ssh/',
+        r'~/\.aws/',
+        r'~/\.gnupg/',
+        r'~/\.env\b',
+        r'\.credentials',
+        r'id_rsa',
+        r'id_ed25519',
+        r'id_ecdsa',
+        r'\.pem\b',
+        r'\.key\b',
+        r'/etc/passwd',
+        r'/etc/shadow',
+    ]
+]
+
+_CREDENTIAL_ENV_PATTERNS = [
+    re.compile(p, re.IGNORECASE) for p in [
+        r'\$\{?GITHUB_TOKEN\}?',
+        r'\$\{?OPENAI_API_KEY\}?',
+        r'\$\{?ANTHROPIC_API_KEY\}?',
+        r'\$\{?AWS_SECRET_ACCESS_KEY\}?',
+        r'\$\{?AWS_ACCESS_KEY_ID\}?',
+        r'\$\{?DATABASE_URL\}?',
+        r'\$\{?DB_PASSWORD\}?',
+        r'\$\{?SECRET_KEY\}?',
+        r'\$\{?PRIVATE_KEY\}?',
+        r'\$\{?API_SECRET\}?',
+        r'\$\{?GOOGLE_API_KEY\}?',
+        r'\$\{?STRIPE_SECRET\}?',
+        r'\$\{?AZURE_CLIENT_SECRET\}?',
+        r'\$\{?AZURE_TENANT_ID\}?',
+        r'\$\{?SLACK_TOKEN\}?',
+        r'\$\{?SLACK_WEBHOOK_URL\}?',
+        r'\$\{?SLACK_BOT_TOKEN\}?',
+        r'\$\{?SENDGRID_API_KEY\}?',
+        r'\$\{?NPM_TOKEN\}?',
+        r'\$\{?NODE_AUTH_TOKEN\}?',
+        r'\$\{?GITLAB_TOKEN\}?',
+        r'\$\{?CI_JOB_TOKEN\}?',
+        r'\$\{?HEROKU_API_KEY\}?',
+        r'\$\{?DIGITALOCEAN_TOKEN\}?',
+        r'\$\{?TWILIO_AUTH_TOKEN\}?',
+        r'\$\{?DATADOG_API_KEY\}?',
+        r'\$\{?SENTRY_AUTH_TOKEN\}?',
+        r'\$\{?CIRCLECI_TOKEN\}?',
+        r'\$\{?DOCKER_PASSWORD\}?',
+        r'\$\{?CLOUDFLARE_API_TOKEN\}?',
+        r'\$\{?TERRAFORM_TOKEN\}?',
+    ]
+]
+
+_HARDCODED_SECRET_PATTERNS = [
+    (re.compile(r'AKIA[A-Z0-9]{16}'), "AWS access key ID"),
+    (re.compile(r'ghp_[A-Za-z0-9]{36,}'), "GitHub personal access token"),
+    (re.compile(r'gho_[A-Za-z0-9]{36,}'), "GitHub OAuth token"),
+    (re.compile(r'ghu_[A-Za-z0-9]{36,}'), "GitHub user-to-server token"),
+    (re.compile(r'ghs_[A-Za-z0-9]{36,}'), "GitHub server-to-server token"),
+    (re.compile(r'github_pat_[A-Za-z0-9_]{22,}'), "GitHub fine-grained PAT"),
+    (re.compile(r'sk-[a-zA-Z0-9]{20,}'), "OpenAI/generic API key"),
+    (re.compile(r'xox[baprs]-[0-9]{10,13}-[0-9A-Za-z-]+'), "Slack token"),
+    (re.compile(r'-----BEGIN\s+(RSA\s+|OPENSSH\s+|EC\s+)?PRIVATE\s+KEY-----'), "Private key block"),
+    (re.compile(r'eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+'), "JWT token"),
+]
+
+_EXTERNAL_URL_PATTERNS = [
+    re.compile(p, re.IGNORECASE) for p in [
+        r'\bcurl\s+.*https?://',
+        r'\bwget\s+.*https?://',
+        r'\bfetch\s*\(\s*["\']https?://',
+        r'\brequests?\.(get|post|put|delete)\s*\(',
+        r'\bhttp\.(get|post|put|delete)\s*\(',
+        r'\burllib\.request',
+    ]
+]
+
+_COMMAND_EXECUTION_PATTERNS = [
+    re.compile(p, re.IGNORECASE) for p in [
+        r'\beval\s*\(',
+        r'\bexec\s*\(',
+        r'\bos\.system\s*\(',
+        r'\bsubprocess\.(run|call|Popen|check_output)\s*\(',
+        r'\bsh\s+-c\s+',
+        r'\bbash\s+-c\s+',
+        r'\bRuntime\.exec\s*\(',
+        r'\bos\.popen\s*\(',
+        r'\bcommands\.getoutput\s*\(',
+    ]
+]
+
+_INSTRUCTION_OVERRIDE_PATTERNS = [
+    re.compile(p, re.IGNORECASE) for p in [
+        r'ignore\s+(all\s+)?previous\s+instructions?',
+        r'disregard\s+(all\s+)?(previous\s+|prior\s+)?instructions?',
+        r'disregard\s+(all\s+)?(previous\s+|prior\s+)?directives?',
+        r'forget\s+(all\s+)?(previous\s+|everything\s+)',
+        r'new\s+instructions?\s+(follow|are|:)',
+        r'override\s+(all\s+)?previous\s+instructions?',
+        r'cancel\s+(all\s+)?prior\s+instructions?',
+        r'your\s+(new|updated)\s+instructions?\s+(are|:)',
+        r'do\s+not\s+follow\s+(your\s+)?(original|previous)',
+    ]
+]
+
+_ROLE_HIJACKING_PATTERNS = [
+    re.compile(p, re.IGNORECASE) for p in [
+        r'you\s+are\s+now\s+(?!going|ready|able)',
+        r'act\s+as\s+(if\s+)?(you\s+are|an?\s+)',
+        r'pretend\s+(to\s+be|you\s+are)',
+        r'assume\s+the\s+role\s+of',
+        r'enter\s+developer\s+mode',
+        r'\bDAN\s+mode\b',
+        r'unrestricted\s+mode',
+        r'you\s+have\s+no\s+restrictions',
+        r'enable\s+jailbreak',
+        r'you\s+are\s+no\s+longer\s+bound',
+    ]
+]
+
+_SAFETY_BYPASS_PATTERNS = [
+    re.compile(p, re.IGNORECASE) for p in [
+        r'bypass\s+(safety|security|filter|restriction)',
+        r'disable\s+(content\s+)?filter',
+        r'remove\s+(all\s+)?restrictions?',
+        r'ignore\s+safety\s+protocols?',
+        r'without\s+(any\s+)?restrictions?',
+        r'system\s+override',
+        r'no\s+ethical\s+guidelines',
+        r'disregard\s+(any\s+)?filters?',
+        r'turn\s+off\s+(safety|content\s+filter)',
+    ]
+]
+
+_ENCODED_CONTENT_PATTERNS = [
+    (re.compile(r'[A-Za-z0-9+/]{40,}={0,2}'), "Long base64-encoded string detected"),
+    (re.compile(r'(?:\\x[0-9a-fA-F]{2}){4,}'), "Hex escape sequences detected"),
+    (re.compile(r'(?:\\u[0-9a-fA-F]{4}){3,}'), "Unicode escape sequences detected"),
+    (re.compile(r'(?:&#x?[0-9a-fA-F]+;){3,}'), "HTML entity sequences detected"),
+    (re.compile(r'(?:%[0-9a-fA-F]{2}){6,}'), "URL-encoded sequences detected"),
+]
+
+_PROMPT_EXTRACTION_PATTERNS = [
+    re.compile(p, re.IGNORECASE) for p in [
+        r'reveal\s+(your\s+)?system\s+prompt',
+        r'show\s+(me\s+)?your\s+instructions',
+        r'print\s+(your\s+)?(initial\s+)?prompt',
+        r'output\s+your\s+(configuration|instructions)',
+        r'what\s+(were\s+you|are\s+your)\s+(told|instructions)',
+        r'repeat\s+the\s+(above|previous)\s+text',
+        r'display\s+(your\s+)?(system\s+)?(prompt|instructions)',
+    ]
+]
+
+_DELIMITER_INJECTION_PATTERNS = [
+    re.compile(p) for p in [
+        r'<\|system\|>',
+        r'<\|user\|>',
+        r'<\|assistant\|>',
+        r'<\|im_start\|>',
+        r'<\|im_end\|>',
+        r'\[INST\]',
+        r'\[/INST\]',
+        r'<<SYS>>',
+        r'<</SYS>>',
+    ]
+]
+
+_CROSS_SKILL_ESCALATION_PATTERNS = [
+    re.compile(p, re.IGNORECASE) for p in [
+        r'install\s+(this\s+|the\s+)?skill\s+from\s+https?://',
+        r'download\s+(this\s+|the\s+)?skill\s+from',
+        r'fetch\s+(this\s+|the\s+)?(skill|extension)\s+from',
+        r'add\s+(this\s+)?to\s+~/\.(claude|gemini|cursor|codex|roo)',
+        r'cp\s+.*\s+~/\.(claude|gemini|cursor|codex|roo)/(skills|extensions)',
+        r'git\s+clone\s+.*\s+~/\.(claude|gemini|cursor|codex)',
+    ]
+]
+
 
 class Finding:
     """Represents a single security finding from the scan."""
@@ -311,41 +528,8 @@ class SkillScanner:
 
     def _check_exfiltration_urls(self, lines, file):
         """Check for URLs that may exfiltrate data to external servers."""
-        patterns = [
-            (
-                r'!\[.*?\]\(https?://[^)]*[\$\{]',
-                "Markdown image with variable interpolation — may exfiltrate data via URL",
-            ),
-            (
-                r'<img\s[^>]*src\s*=\s*["\']https?://',
-                "HTML img tag with external URL — may load tracking pixel or exfiltrate data",
-            ),
-            (
-                r'!\[.*?\]\(https?://[^)]*\?[^)]*=',
-                "Markdown image with query parameters — may exfiltrate data via URL parameters",
-            ),
-            (
-                r'!\[.*?\]\(data:',
-                "Markdown image with data URI — may contain embedded malicious payload",
-            ),
-            (
-                r'!\[.*?\]\(//[^)]+',
-                "Markdown image with protocol-relative URL — may exfiltrate data",
-            ),
-            (
-                r'href\s*=\s*["\']javascript:',
-                "JavaScript URI in link — arbitrary code execution risk",
-            ),
-            (
-                r'src\s*=\s*["\']data:',
-                "Data URI in src attribute — may contain embedded malicious payload",
-            ),
-        ]
-
-        compiled = [(re.compile(p, re.IGNORECASE), desc) for p, desc in patterns]
-
         for line_num, line in enumerate(lines, start=1):
-            for regex, description in compiled:
+            for regex, description in _EXFILTRATION_URL_PATTERNS:
                 if regex.search(line):
                     self._add_finding(
                         severity="critical",
@@ -360,14 +544,9 @@ class SkillScanner:
 
     def _check_shell_pipe_execution(self, lines, file, line_map=None):
         """Check for shell commands piped from remote sources."""
-        pattern = re.compile(
-            r'(curl|wget)\s+[^|]*\|\s*(bash|sh|zsh|python[23]?|perl|ruby|node)',
-            re.IGNORECASE,
-        )
-
         for idx, line in enumerate(lines):
             line_num = line_map[idx] if line_map else idx + 1
-            match = pattern.search(line)
+            match = _SHELL_PIPE_PATTERN.search(line)
             if match:
                 self._add_finding(
                     severity="critical",
@@ -381,59 +560,8 @@ class SkillScanner:
 
     def _check_credential_references(self, lines, file):
         """Check for references to credentials, tokens, or API keys."""
-        path_patterns = [
-            r'~/\.ssh/',
-            r'~/\.aws/',
-            r'~/\.gnupg/',
-            r'~/\.env\b',
-            r'\.credentials',
-            r'id_rsa',
-            r'id_ed25519',
-            r'id_ecdsa',
-            r'\.pem\b',
-            r'\.key\b',
-            r'/etc/passwd',
-            r'/etc/shadow',
-        ]
-        env_patterns = [
-            r'\$\{?GITHUB_TOKEN\}?',
-            r'\$\{?OPENAI_API_KEY\}?',
-            r'\$\{?ANTHROPIC_API_KEY\}?',
-            r'\$\{?AWS_SECRET_ACCESS_KEY\}?',
-            r'\$\{?AWS_ACCESS_KEY_ID\}?',
-            r'\$\{?DATABASE_URL\}?',
-            r'\$\{?DB_PASSWORD\}?',
-            r'\$\{?SECRET_KEY\}?',
-            r'\$\{?PRIVATE_KEY\}?',
-            r'\$\{?API_SECRET\}?',
-            r'\$\{?GOOGLE_API_KEY\}?',
-            r'\$\{?STRIPE_SECRET\}?',
-            r'\$\{?AZURE_CLIENT_SECRET\}?',
-            r'\$\{?AZURE_TENANT_ID\}?',
-            r'\$\{?SLACK_TOKEN\}?',
-            r'\$\{?SLACK_WEBHOOK_URL\}?',
-            r'\$\{?SLACK_BOT_TOKEN\}?',
-            r'\$\{?SENDGRID_API_KEY\}?',
-            r'\$\{?NPM_TOKEN\}?',
-            r'\$\{?NODE_AUTH_TOKEN\}?',
-            r'\$\{?GITLAB_TOKEN\}?',
-            r'\$\{?CI_JOB_TOKEN\}?',
-            r'\$\{?HEROKU_API_KEY\}?',
-            r'\$\{?DIGITALOCEAN_TOKEN\}?',
-            r'\$\{?TWILIO_AUTH_TOKEN\}?',
-            r'\$\{?DATADOG_API_KEY\}?',
-            r'\$\{?SENTRY_AUTH_TOKEN\}?',
-            r'\$\{?CIRCLECI_TOKEN\}?',
-            r'\$\{?DOCKER_PASSWORD\}?',
-            r'\$\{?CLOUDFLARE_API_TOKEN\}?',
-            r'\$\{?TERRAFORM_TOKEN\}?',
-        ]
-
-        compiled_path = [re.compile(p, re.IGNORECASE) for p in path_patterns]
-        compiled_env = [re.compile(p, re.IGNORECASE) for p in env_patterns]
-
         for line_num, line in enumerate(lines, start=1):
-            for regex in compiled_path:
+            for regex in _CREDENTIAL_PATH_PATTERNS:
                 if regex.search(line):
                     self._add_finding(
                         severity="warning",
@@ -446,7 +574,7 @@ class SkillScanner:
                     )
                     break
             else:
-                for regex in compiled_env:
+                for regex in _CREDENTIAL_ENV_PATTERNS:
                     if regex.search(line):
                         self._add_finding(
                             severity="warning",
@@ -461,23 +589,8 @@ class SkillScanner:
 
     def _check_hardcoded_secrets(self, lines, file):
         """Check for hardcoded secret values (not env var references)."""
-        patterns = [
-            (r'AKIA[A-Z0-9]{16}', "AWS access key ID"),
-            (r'ghp_[A-Za-z0-9]{36,}', "GitHub personal access token"),
-            (r'gho_[A-Za-z0-9]{36,}', "GitHub OAuth token"),
-            (r'ghu_[A-Za-z0-9]{36,}', "GitHub user-to-server token"),
-            (r'ghs_[A-Za-z0-9]{36,}', "GitHub server-to-server token"),
-            (r'github_pat_[A-Za-z0-9_]{22,}', "GitHub fine-grained PAT"),
-            (r'sk-[a-zA-Z0-9]{20,}', "OpenAI/generic API key"),
-            (r'xox[baprs]-[0-9]{10,13}-[0-9A-Za-z-]+', "Slack token"),
-            (r'-----BEGIN\s+(RSA\s+|OPENSSH\s+|EC\s+)?PRIVATE\s+KEY-----', "Private key block"),
-            (r'eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+', "JWT token"),
-        ]
-
-        compiled = [(re.compile(p), desc) for p, desc in patterns]
-
         for line_num, line in enumerate(lines, start=1):
-            for regex, description in compiled:
+            for regex, description in _HARDCODED_SECRET_PATTERNS:
                 if regex.search(line):
                     self._add_finding(
                         severity="warning",
@@ -492,19 +605,8 @@ class SkillScanner:
 
     def _check_external_url_references(self, lines, file):
         """Check for external URL references that may fetch untrusted content."""
-        patterns = [
-            r'\bcurl\s+.*https?://',
-            r'\bwget\s+.*https?://',
-            r'\bfetch\s*\(\s*["\']https?://',
-            r'\brequests?\.(get|post|put|delete)\s*\(',
-            r'\bhttp\.(get|post|put|delete)\s*\(',
-            r'\burllib\.request',
-        ]
-
-        compiled = [re.compile(p, re.IGNORECASE) for p in patterns]
-
         for line_num, line in enumerate(lines, start=1):
-            for regex in compiled:
+            for regex in _EXTERNAL_URL_PATTERNS:
                 if regex.search(line):
                     self._add_finding(
                         severity="warning",
@@ -519,23 +621,9 @@ class SkillScanner:
 
     def _check_command_execution(self, lines, file, line_map=None):
         """Check for dangerous command execution patterns."""
-        patterns = [
-            r'\beval\s*\(',
-            r'\bexec\s*\(',
-            r'\bos\.system\s*\(',
-            r'\bsubprocess\.(run|call|Popen|check_output)\s*\(',
-            r'\bsh\s+-c\s+',
-            r'\bbash\s+-c\s+',
-            r'\bRuntime\.exec\s*\(',
-            r'\bos\.popen\s*\(',
-            r'\bcommands\.getoutput\s*\(',
-        ]
-
-        compiled = [re.compile(p, re.IGNORECASE) for p in patterns]
-
         for idx, line in enumerate(lines):
             line_num = line_map[idx] if line_map else idx + 1
-            for regex in compiled:
+            for regex in _COMMAND_EXECUTION_PATTERNS:
                 if regex.search(line):
                     self._add_finding(
                         severity="warning",
@@ -550,22 +638,8 @@ class SkillScanner:
 
     def _check_instruction_override(self, lines, file):
         """Check for attempts to override system instructions."""
-        patterns = [
-            r'ignore\s+(all\s+)?previous\s+instructions?',
-            r'disregard\s+(all\s+)?(previous\s+|prior\s+)?instructions?',
-            r'disregard\s+(all\s+)?(previous\s+|prior\s+)?directives?',
-            r'forget\s+(all\s+)?(previous\s+|everything\s+)',
-            r'new\s+instructions?\s+(follow|are|:)',
-            r'override\s+(all\s+)?previous\s+instructions?',
-            r'cancel\s+(all\s+)?prior\s+instructions?',
-            r'your\s+(new|updated)\s+instructions?\s+(are|:)',
-            r'do\s+not\s+follow\s+(your\s+)?(original|previous)',
-        ]
-
-        compiled = [re.compile(p, re.IGNORECASE) for p in patterns]
-
         for line_num, line in enumerate(lines, start=1):
-            for regex in compiled:
+            for regex in _INSTRUCTION_OVERRIDE_PATTERNS:
                 if regex.search(line):
                     self._add_finding(
                         severity="warning",
@@ -580,23 +654,8 @@ class SkillScanner:
 
     def _check_role_hijacking(self, lines, file):
         """Check for role/persona hijacking attempts."""
-        patterns = [
-            r'you\s+are\s+now\s+(?!going|ready|able)',
-            r'act\s+as\s+(if\s+)?(you\s+are|an?\s+)',
-            r'pretend\s+(to\s+be|you\s+are)',
-            r'assume\s+the\s+role\s+of',
-            r'enter\s+developer\s+mode',
-            r'\bDAN\s+mode\b',
-            r'unrestricted\s+mode',
-            r'you\s+have\s+no\s+restrictions',
-            r'enable\s+jailbreak',
-            r'you\s+are\s+no\s+longer\s+bound',
-        ]
-
-        compiled = [re.compile(p, re.IGNORECASE) for p in patterns]
-
         for line_num, line in enumerate(lines, start=1):
-            for regex in compiled:
+            for regex in _ROLE_HIJACKING_PATTERNS:
                 if regex.search(line):
                     self._add_finding(
                         severity="warning",
@@ -611,22 +670,8 @@ class SkillScanner:
 
     def _check_safety_bypass(self, lines, file):
         """Check for attempts to bypass safety measures."""
-        patterns = [
-            r'bypass\s+(safety|security|filter|restriction)',
-            r'disable\s+(content\s+)?filter',
-            r'remove\s+(all\s+)?restrictions?',
-            r'ignore\s+safety\s+protocols?',
-            r'without\s+(any\s+)?restrictions?',
-            r'system\s+override',
-            r'no\s+ethical\s+guidelines',
-            r'disregard\s+(any\s+)?filters?',
-            r'turn\s+off\s+(safety|content\s+filter)',
-        ]
-
-        compiled = [re.compile(p, re.IGNORECASE) for p in patterns]
-
         for line_num, line in enumerate(lines, start=1):
-            for regex in compiled:
+            for regex in _SAFETY_BYPASS_PATTERNS:
                 if regex.search(line):
                     self._add_finding(
                         severity="warning",
@@ -712,16 +757,8 @@ class SkillScanner:
 
     def _check_encoded_content(self, lines, file):
         """Check for base64 or other encoded content that may hide payloads."""
-        patterns = [
-            (re.compile(r'[A-Za-z0-9+/]{40,}={0,2}'), "Long base64-encoded string detected"),
-            (re.compile(r'(?:\\x[0-9a-fA-F]{2}){4,}'), "Hex escape sequences detected"),
-            (re.compile(r'(?:\\u[0-9a-fA-F]{4}){3,}'), "Unicode escape sequences detected"),
-            (re.compile(r'(?:&#x?[0-9a-fA-F]+;){3,}'), "HTML entity sequences detected"),
-            (re.compile(r'(?:%[0-9a-fA-F]{2}){6,}'), "URL-encoded sequences detected"),
-        ]
-
         for line_num, line in enumerate(lines, start=1):
-            for regex, description in patterns:
+            for regex, description in _ENCODED_CONTENT_PATTERNS:
                 match = regex.search(line)
                 if match:
                     matched = match.group()
@@ -740,20 +777,8 @@ class SkillScanner:
 
     def _check_prompt_extraction(self, lines, file):
         """Check for attempts to extract system prompts or instructions."""
-        patterns = [
-            r'reveal\s+(your\s+)?system\s+prompt',
-            r'show\s+(me\s+)?your\s+instructions',
-            r'print\s+(your\s+)?(initial\s+)?prompt',
-            r'output\s+your\s+(configuration|instructions)',
-            r'what\s+(were\s+you|are\s+your)\s+(told|instructions)',
-            r'repeat\s+the\s+(above|previous)\s+text',
-            r'display\s+(your\s+)?(system\s+)?(prompt|instructions)',
-        ]
-
-        compiled = [re.compile(p, re.IGNORECASE) for p in patterns]
-
         for line_num, line in enumerate(lines, start=1):
-            for regex in compiled:
+            for regex in _PROMPT_EXTRACTION_PATTERNS:
                 if regex.search(line):
                     self._add_finding(
                         severity="info",
@@ -768,23 +793,8 @@ class SkillScanner:
 
     def _check_delimiter_injection(self, lines, file):
         """Check for delimiter injection attacks."""
-        # Case-sensitive exact token patterns
-        tokens = [
-            r'<\|system\|>',
-            r'<\|user\|>',
-            r'<\|assistant\|>',
-            r'<\|im_start\|>',
-            r'<\|im_end\|>',
-            r'\[INST\]',
-            r'\[/INST\]',
-            r'<<SYS>>',
-            r'<</SYS>>',
-        ]
-
-        compiled = [re.compile(p) for p in tokens]
-
         for line_num, line in enumerate(lines, start=1):
-            for regex in compiled:
+            for regex in _DELIMITER_INJECTION_PATTERNS:
                 match = regex.search(line)
                 if match:
                     self._add_finding(
@@ -800,19 +810,8 @@ class SkillScanner:
 
     def _check_cross_skill_escalation(self, lines, file):
         """Check for attempts to escalate privileges across skills."""
-        patterns = [
-            r'install\s+(this\s+|the\s+)?skill\s+from\s+https?://',
-            r'download\s+(this\s+|the\s+)?skill\s+from',
-            r'fetch\s+(this\s+|the\s+)?(skill|extension)\s+from',
-            r'add\s+(this\s+)?to\s+~/\.(claude|gemini|cursor|codex|roo)',
-            r'cp\s+.*\s+~/\.(claude|gemini|cursor|codex|roo)/(skills|extensions)',
-            r'git\s+clone\s+.*\s+~/\.(claude|gemini|cursor|codex)',
-        ]
-
-        compiled = [re.compile(p, re.IGNORECASE) for p in patterns]
-
         for line_num, line in enumerate(lines, start=1):
-            for regex in compiled:
+            for regex in _CROSS_SKILL_ESCALATION_PATTERNS:
                 if regex.search(line):
                     self._add_finding(
                         severity="info",

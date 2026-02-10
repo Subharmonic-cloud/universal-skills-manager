@@ -247,3 +247,18 @@ def test_homoglyph_instruction_override_detected(scanner, tmp_skill):
         f["category"] in ("instruction_override", "homoglyph_detected")
         for f in report["findings"]
     )
+
+
+# --- Task 3.3: Module-level regex compilation (M4) ---
+
+import time
+
+
+def test_scan_performance_regression(scanner, tmp_skill):
+    """Scanning 100 files should complete within a reasonable time."""
+    for i in range(100):
+        tmp_skill.add_file(f"file_{i}.md", f"# File {i}\nSome content line {i}\n")
+    start = time.monotonic()
+    scanner.scan_path(tmp_skill.base)
+    elapsed = time.monotonic() - start
+    assert elapsed < 10.0, f"Scan took {elapsed:.2f}s for 100 files"
