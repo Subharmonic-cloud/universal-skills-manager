@@ -157,18 +157,23 @@ This skill (Universal Skills Manager) requires network access to call the Skills
     -   **Choose method:**
         -   **Keyword Search** (`/api/v1/skills/search`): For specific terms, exact matches
         -   **AI Semantic Search** (`/api/v1/skills/ai-search`): For natural language queries (e.g., "help me debug code")
-    -   **Execute:**
+    -   **IMPORTANT:** Always capture the API key into a local variable first, then use it. Direct `$SKILLSMP_API_KEY` expansion in curl can fail in some shell contexts:
         ```bash
+        # Step 1: Capture key (do this once per session)
+        API_KEY=$(printenv SKILLSMP_API_KEY)
+
+        # Step 2: Use ${API_KEY} in curl commands
         # Keyword Search
         curl -X GET "https://skillsmp.com/api/v1/skills/search?q={query}&limit=20&sortBy=recent" \
-          -H "Authorization: Bearer $SKILLSMP_API_KEY"
+          -H "Authorization: Bearer ${API_KEY}"
 
         # AI Semantic Search (for natural language queries)
         curl -X GET "https://skillsmp.com/api/v1/skills/ai-search?q={query}" \
-          -H "Authorization: Bearer $SKILLSMP_API_KEY"
+          -H "Authorization: Bearer ${API_KEY}"
         ```
     -   **Parse:** Extract from `data.skills[]` (keyword) or `data.data[]` (AI search)
     -   Available fields: `id`, `name`, `author`, `description`, `githubUrl`, `skillUrl`, `stars`, `updatedAt`
+    -   **Note:** SkillsMP requires a `q` parameter — there is no browse/list endpoint. For "top skills" or browsing without a specific query, use SkillHub or ClawHub instead (both support browsing by stars/downloads).
 
     **If using SkillHub (open catalog, no auth):**
     -   **Execute:**
