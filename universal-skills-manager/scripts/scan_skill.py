@@ -47,6 +47,33 @@ _BUILD_BASENAMES = frozenset({
     "Makefile", "Dockerfile", "Jenkinsfile", "Containerfile",
 })
 
+def _join_continuation_lines(lines):
+    """Join lines ending with backslash into single logical lines.
+
+    Returns list of (logical_line, start_line_number) tuples.
+    """
+    result = []
+    current = ""
+    start_num = 1
+
+    for i, line in enumerate(lines, start=1):
+        if current == "":
+            start_num = i
+
+        stripped = line.rstrip()
+        if stripped.endswith("\\"):
+            current += stripped[:-1] + " "
+        else:
+            current += line
+            result.append((current, start_num))
+            current = ""
+
+    if current:
+        result.append((current, start_num))
+
+    return result
+
+
 _ANSI_ESCAPE_RE = re.compile(
     r'\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07]*(?:\x07|\x1b\\)|\x1b[()][A-B0-2]'
 )
@@ -170,6 +197,14 @@ class SkillScanner:
             self._check_credential_references(lines, relative)
             self._check_encoded_content(lines, relative)
 
+        # Multi-line detection pass on joined continuation lines
+        if suffix in _SCRIPT_EXTENSIONS or basename in _BUILD_BASENAMES or suffix == ".md":
+            joined = _join_continuation_lines(lines)
+            joined_text = [line for line, _ in joined]
+            joined_map = [num for _, num in joined]
+            self._check_shell_pipe_execution(joined_text, relative, line_map=joined_map)
+            self._check_command_execution(joined_text, relative, line_map=joined_map)
+
     def _check_all_categories(self, lines, file):
         """Run all check categories against the given lines (used for .md files)."""
         self._check_exfiltration_urls(lines, file)
@@ -270,14 +305,15 @@ class SkillScanner:
                     )
                     break  # One finding per line
 
-    def _check_shell_pipe_execution(self, lines, file):
+    def _check_shell_pipe_execution(self, lines, file, line_map=None):
         """Check for shell commands piped from remote sources."""
         pattern = re.compile(
             r'(curl|wget)\s+[^|]*\|\s*(bash|sh|zsh|python[23]?|perl|ruby|node)',
             re.IGNORECASE,
         )
 
-        for line_num, line in enumerate(lines, start=1):
+        for idx, line in enumerate(lines):
+            line_num = line_map[idx] if line_map else idx + 1
             match = pattern.search(line)
             if match:
                 self._add_finding(
@@ -378,7 +414,7 @@ class SkillScanner:
                     )
                     break
 
-    def _check_command_execution(self, lines, file):
+    def _check_command_execution(self, lines, file, line_map=None):
         """Check for dangerous command execution patterns."""
         patterns = [
             r'\beval\s*\(',
@@ -394,7 +430,8 @@ class SkillScanner:
 
         compiled = [re.compile(p, re.IGNORECASE) for p in patterns]
 
-        for line_num, line in enumerate(lines, start=1):
+        for idx, line in enumerate(lines):
+            line_num = line_map[idx] if line_map else idx + 1
             for regex in compiled:
                 if regex.search(line):
                     self._add_finding(
@@ -687,6 +724,10 @@ class SkillScanner:
 
     def _add_finding(self, severity, category, file, line, description, matched_text, recommendation):
         """Add a finding to the findings list."""
+        # Deduplicate by file+line+category
+        for existing in self.findings:
+            if existing.file == file and existing.line == line and existing.category == category:
+                return
         # Strip ANSI escape sequences and control characters
         sanitized_text = _ANSI_ESCAPE_RE.sub('', matched_text)
         sanitized_text = ''.join(
