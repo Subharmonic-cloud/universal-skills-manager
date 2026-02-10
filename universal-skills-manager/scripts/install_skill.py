@@ -831,7 +831,7 @@ def run_security_scan(skill_dir: Path, force: bool = False) -> bool:
         return True
 
     # Display findings grouped by severity
-    severity_order = ["CRITICAL", "WARNING", "INFO"]
+    severity_order = ["critical", "warning", "info"]
 
     print(f"\n  Security scan found {total} issue(s):")
     print("  " + "-" * 48)
@@ -841,11 +841,11 @@ def run_security_scan(skill_dir: Path, force: bool = False) -> bool:
         if not severity_findings:
             continue
 
-        print(f"\n  [{severity}]")
+        print(f"\n  [{severity.upper()}]")
         for finding in severity_findings:
             file_name = finding.get("file", "unknown")
             line = finding.get("line")
-            message = finding.get("message", "No description")
+            message = finding.get("description", "No description")
             location = f"{file_name}:{line}" if line else file_name
             print(f"    - {location}: {message}")
 
@@ -854,9 +854,9 @@ def run_security_scan(skill_dir: Path, force: bool = False) -> bool:
     # Summary line with counts
     parts = []
     for severity in severity_order:
-        count = summary.get(severity.lower(), summary.get(severity, 0))
+        count = summary.get(severity, 0)
         if count > 0:
-            parts.append(f"{count} {severity.lower()}")
+            parts.append(f"{count} {severity}")
     print(f"  Summary: {', '.join(parts)}")
 
     if force:

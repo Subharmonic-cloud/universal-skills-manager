@@ -10,7 +10,7 @@ metadata:
     disable-model-invocation: true
 ---
 
-<!-- Version: 1.4.1 -->
+<!-- Version: 1.4.2 -->
 
 # Universal Skills Manager
 

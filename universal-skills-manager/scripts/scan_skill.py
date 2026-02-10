@@ -395,8 +395,12 @@ class SkillScanner:
         relative = str(file_path.relative_to(base_path))
 
         # Open with O_NOFOLLOW to eliminate TOCTOU between is_symlink and read
+        # O_NOFOLLOW is POSIX-only; on Windows, rely on the is_symlink() pre-check above
+        open_flags = os.O_RDONLY
+        if hasattr(os, 'O_NOFOLLOW'):
+            open_flags |= os.O_NOFOLLOW
         try:
-            fd = os.open(str(file_path), os.O_RDONLY | os.O_NOFOLLOW)
+            fd = os.open(str(file_path), open_flags)
         except (OSError, PermissionError) as exc:
             self.files_scanned.append(relative)
             self._add_finding(

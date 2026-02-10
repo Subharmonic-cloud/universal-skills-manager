@@ -15,7 +15,7 @@
 
 ---
 
-**v1.4.0** · Three-source skill discovery · 9 supported AI tools · Security scanning built-in
+**v1.4.2** · Three-source skill discovery · 9 supported AI tools · Security scanning built-in
 
 A centralized skill manager for AI coding assistants. Discovers, installs, and synchronizes skills from multiple sources — [SkillsMP.com](https://skillsmp.com) (curated, AI semantic search), [SkillHub](https://skills.palebluedot.live) (173k+ community skills, no API key required), and [ClawHub](https://clawhub.ai) (5,700+ versioned skills, semantic search, no API key required) — across multiple AI tools including Claude Code, OpenAI Codex, Gemini CLI, and more.
 
@@ -38,7 +38,7 @@ This video covers:
 
 - 🔍 **Multi-Source Search**: Find skills from SkillsMP (curated, AI semantic search), SkillHub (173k+ community catalog), and ClawHub (5,700+ versioned skills, semantic search) — no API key needed for SkillHub or ClawHub
 - 📦 **One-Click Install**: Download and validate skills with atomic installation (temp → validate → install)
-- 🛡️ **Security Scanning**: 14 detection categories across 3 severity levels — catches invisible Unicode, data exfiltration, shell injection, prompt injection, and more
+- 🛡️ **Security Scanning**: 20+ detection categories across 3 severity levels — catches invisible Unicode, data exfiltration, shell injection, prompt injection, homoglyphs, hardcoded secrets, and more
 - 🔄 **Cross-Tool Sync**: Automatically sync skills across all your installed AI tools
 - 📊 **Skill Matrix Report**: See which skills are installed on which tools at a glance
 - ⚡ **One-Liner Installer**: `curl | sh` auto-detects your tools and installs everywhere, with `--tools` flag for targeting specific tools
@@ -48,15 +48,31 @@ This video covers:
 
 ## Security Scanning
 
-Skills are automatically scanned for security threats at install time. The scanner checks for:
+Skills are automatically scanned for security threats at install time. The scanner (`scan_skill.py` v1.1.0) checks 20+ threat categories:
 
-- **Invisible Unicode** -- hidden characters that encode instructions invisible to humans
-- **Data exfiltration** -- markdown images or URLs designed to steal data
-- **Shell injection** -- remote downloads piped into shell interpreters
-- **Credential theft** -- references to SSH keys, API tokens, and secret files
-- **Prompt injection** -- instruction overrides, role hijacking, and safety bypasses
+**Critical:**
+- Symlink traversal and path escape attempts
+- Invisible/zero-width Unicode characters hiding instructions
+- Data exfiltration via markdown images with variable interpolation
+- Remote code piped into shell interpreters (`curl | bash`)
+- Unclosed HTML comments suppressing subsequent content
 
-Findings are displayed with severity levels (Critical/Warning/Info) and you choose whether to proceed. See [Security Scanning Reference](docs/SECURITY_SCANNING.md) for full details.
+**Warning:**
+- Credential file references (`~/.ssh/`, `~/.aws/`, etc.) and 30+ sensitive env var patterns
+- Hardcoded secrets (AWS keys, GitHub PATs, Slack tokens, JWTs, private key blocks)
+- Dangerous command execution (`eval()`, `os.system()`, `subprocess.run()`)
+- Prompt injection (instruction overrides, role hijacking, safety bypasses)
+- Homoglyph characters (Cyrillic look-alikes that bypass text-based checks)
+- Data URIs, JavaScript URIs, and protocol-relative URLs
+
+**Info:**
+- Encoded content (base64, hex, URL-encoded payloads)
+- LLM delimiter tokens, cross-skill escalation attempts
+- Binary files and unreadable files
+
+**Scanner defenses:** Triple-layer symlink protection, fd-based TOCTOU mitigation, 10MB file size limit, ANSI escape stripping, Unicode NFC normalization, continuation line joining for multi-line payloads.
+
+Findings are displayed with severity levels and you choose whether to proceed. See [Security Scanning Reference](docs/SECURITY_SCANNING.md) and [SECURITY.md](SECURITY.md) for full details.
 
 ## Installation
 
@@ -473,13 +489,19 @@ universal-skills-manager/
 ├── assets/
 │   └── mascot.png                   # Project mascot image
 ├── docs/
-│   └── SECURITY_SCANNING.md         # Security scanner reference
+│   ├── SECURITY_SCANNING.md         # Security scanner reference
+│   ├── scan_skill-security-analysis.md  # Full security analysis of scanner
+│   └── remediation-final-code-review.md # Code review of security hardening
+├── tests/
+│   ├── conftest.py                  # Test fixtures
+│   └── test_scan_skill.py           # Scanner test suite (62 tests)
+├── SECURITY.md                      # Security policy and vulnerability reporting
 └── universal-skills-manager/        # The skill itself
     ├── SKILL.md                     # Skill definition and logic
     ├── config.json                  # API key config template
     └── scripts/
         ├── install_skill.py         # Helper script for downloading skills
-        └── scan_skill.py            # Security scanner (14 detection categories)
+        └── scan_skill.py            # Security scanner (20+ detection categories)
 ```
 
 ## Contributing
@@ -509,4 +531,6 @@ MIT License - See repository for details
 ## Acknowledgments
 
 This skill was inspired by the [skill-lookup](https://skillsmp.com/skills/f-prompts-chat-plugins-claude-prompts-chat-skills-skill-lookup-skill-md) skill by f-prompts.
+
+Special thanks to [@ben-alkov](https://github.com/ben-alkov) for the comprehensive security analysis and hardening of `scan_skill.py` (PR #2).
 
