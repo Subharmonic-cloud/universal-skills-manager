@@ -13,6 +13,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cline included in Skill Matrix Report tool detection and skill collection.
 - Cross-Platform Adaptation note: Cline also reads `.claude/skills/` at the project level, so Claude Code project skills work in Cline automatically.
 
+## [1.5.2] - 2026-02-10
+
+### Fixed
+- **Cursor path correction**: Fixed Cursor skills path from `.cursor/extensions/` to `.cursor/skills/` in the ecosystem table, Skill Matrix Report detection, and install script.
+
+## [1.5.1] - 2026-02-10
+
+### Fixed
+- **Frontmatter fix**: Moved `disable-model-invocation` from nested `metadata` block to top-level frontmatter for correct parsing.
+
 ## [1.5.0] - 2026-02-10
 
 ### Added
