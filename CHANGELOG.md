@@ -5,11 +5,6 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.5.4] - 2026-02-13
-
-### Added
-- **Check for Updates capability**: New on-demand command ("Is my skills manager up to date?") that compares the locally installed version against the latest on GitHub. Only makes a network request when explicitly asked — no background phoning home. Reports version status and offers to run the update installer.
-
 ## [1.5.3] - 2026-02-13
 
 ### Added

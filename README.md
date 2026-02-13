@@ -15,7 +15,7 @@
 
 ---
 
-**v1.5.4** · Three-source skill discovery · 10 supported AI tools · Hardened security scanning
+**v1.5.3** · Three-source skill discovery · 10 supported AI tools · Hardened security scanning
 
 A centralized skill manager for AI coding assistants. Discovers, installs, and synchronizes skills from multiple sources — [SkillsMP.com](https://skillsmp.com) (curated, AI semantic search), [SkillHub](https://skills.palebluedot.live) (173k+ community skills, no API key required), and [ClawHub](https://clawhub.ai) (5,700+ versioned skills, semantic search, no API key required) — across multiple AI tools including Claude Code, OpenAI Codex, Gemini CLI, and more.
 

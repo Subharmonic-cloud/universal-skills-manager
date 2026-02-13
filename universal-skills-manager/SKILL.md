@@ -10,7 +10,7 @@ metadata:
     primaryEnv: SKILLSMP_API_KEY
 ---
 
-<!-- Version: 1.5.4 -->
+<!-- Version: 1.5.3 -->
 
 # Universal Skills Manager
 
@@ -25,7 +25,6 @@ Activate this skill when the user:
 - Asks to **move or copy** skills between scopes (User vs. Project).
 - Mentions "Google Anti-Gravity", "OpenCode", or "Gemini" in the context of skills/extensions.
 - Wants to **package this skill for claude.ai or Claude Desktop** (ZIP upload).
-- Asks to **check for updates** to the Universal Skills Manager itself (e.g., "Is my skills manager up to date?").
 
 ## Supported Ecosystem
 
@@ -371,40 +370,6 @@ This skill (Universal Skills Manager) requires network access to call the Skills
 
 6.  **Security Reminder:**
     *   "Note: This ZIP contains your API key. Do not share it publicly or commit it to version control."
-
-### 6. Check for Updates
-**Trigger:** User asks if the Universal Skills Manager is up to date (e.g., "Is my skills manager up to date?", "Check for updates", "Am I on the latest version?").
-
-**Procedure:**
-1.  **Read Local Version:**
-    -   Find the installed SKILL.md and extract the version from the `<!-- Version: X.Y.Z -->` comment near the top of the file:
-        ```bash
-        head -15 ~/.claude/skills/universal-skills-manager/SKILL.md | grep -oP '(?<=<!-- Version: )[\d.]+(?= -->)'
-        ```
-    -   Adapt the path based on whichever tool the user is currently using (e.g., `~/.gemini/skills/`, `~/.cursor/skills/`, etc.).
-    -   If no version comment is found, report: "Your installed version doesn't include a version marker. Consider reinstalling to get the latest version."
-
-2.  **Fetch Remote Version:**
-    -   Fetch only the first 15 lines of the latest SKILL.md from GitHub (avoids downloading the full file):
-        ```bash
-        curl -fsSL "https://raw.githubusercontent.com/jacob-bd/universal-skills-manager/main/universal-skills-manager/SKILL.md" | head -15 | grep -oP '(?<=<!-- Version: )[\d.]+(?= -->)'
-        ```
-    -   If the fetch fails, report: "Couldn't reach GitHub to check for updates. You can check manually at https://github.com/jacob-bd/universal-skills-manager"
-
-3.  **Compare Versions:**
-    -   If remote version is newer than local: Report the update and offer to install it.
-        > "You're on v{local}. Version v{remote} is available. You can update by running:
-        > ```
-        > curl -fsSL https://raw.githubusercontent.com/jacob-bd/universal-skills-manager/main/install.sh | sh
-        > ```
-        > Or I can run the update for you now. Want me to proceed?"
-    -   If versions match: Report that the skill is up to date.
-        > "You're on v{local} — that's the latest version."
-    -   If local is somehow newer than remote (e.g., development build): Report it.
-        > "You're on v{local}, which is newer than the latest release (v{remote}). You may be running a development build."
-
-4.  **Changelog Link:**
-    -   Always include: "See what's changed: https://github.com/jacob-bd/universal-skills-manager/blob/main/CHANGELOG.md"
 
 ## Operational Rules
 
