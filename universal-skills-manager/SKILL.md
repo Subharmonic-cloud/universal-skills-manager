@@ -10,7 +10,7 @@ metadata:
     primaryEnv: SKILLSMP_API_KEY
 ---
 
-<!-- Version: 1.5.1 -->
+<!-- Version: 1.5.2 -->
 
 # Universal Skills Manager
 
@@ -40,7 +40,7 @@ This skill manages the following tools and scopes. Always verify these paths exi
 | **OpenAI Codex** | `~/.codex/skills/` | `./.codex/skills/` |
 | **block/goose** | `~/.config/goose/skills/` | `./.goose/agents/` |
 | **Roo Code** | `~/.roo/skills/` | `./.roo/skills/` |
-| **Cursor** | `~/.cursor/extensions/` | `./.cursor/extensions/` |
+| **Cursor** | `~/.cursor/skills/` | `./.cursor/skills/` |
 
 **claude.ai / Claude Desktop (ZIP Upload Required):**
 
@@ -259,7 +259,7 @@ This skill (Universal Skills Manager) requires network access to call the Skills
     ls -d ~/.gemini/skills 2>/dev/null && echo "Gemini: ✓"
     ls -d ~/.gemini/antigravity/skills 2>/dev/null && echo "Antigravity: ✓"
     ls -d ~/.openclaw/workspace/skills 2>/dev/null && echo "OpenClaw: ✓"
-    ls -d ~/.cursor/extensions 2>/dev/null && echo "Cursor: ✓"
+    ls -d ~/.cursor/skills 2>/dev/null && echo "Cursor: ✓"
     ls -d ~/.config/opencode/skills 2>/dev/null && echo "OpenCode: ✓"
     ls -d ~/.roo/skills 2>/dev/null && echo "Roo: ✓"
     ls -d ~/.config/goose/skills 2>/dev/null && echo "Goose: ✓"

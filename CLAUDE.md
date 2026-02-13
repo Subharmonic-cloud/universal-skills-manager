@@ -59,7 +59,7 @@ The skill manages skills across these AI tools and their respective paths:
 | OpenAI Codex | `~/.codex/skills/` | `./.codex/skills/` |
 | block/goose | `~/.config/goose/skills/` | `./.goose/agents/` |
 | Roo Code | `~/.roo/skills/` | `./.roo/skills/` |
-| Cursor | `~/.cursor/extensions/` | `./.cursor/extensions/` |
+| Cursor | `~/.cursor/skills/` | `./.cursor/skills/` |
 
 ### claude.ai and Claude Desktop Support
 

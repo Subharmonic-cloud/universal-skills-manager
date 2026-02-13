@@ -172,7 +172,7 @@ detect_tools() {
     check_tool "OpenAI Codex"   "$HOME/.codex"                  "$HOME/.codex/skills"
     check_tool "block/goose"    "$HOME/.config/goose"           "$HOME/.config/goose/skills"
     check_tool "Roo Code"       "$HOME/.roo"                    "$HOME/.roo/skills"
-    check_tool "Cursor"         "$HOME/.cursor"                 "$HOME/.cursor/extensions"
+    check_tool "Cursor"         "$HOME/.cursor"                 "$HOME/.cursor/skills"
 
     if [ "$DETECTED_COUNT" -eq 0 ]; then
         echo ""
