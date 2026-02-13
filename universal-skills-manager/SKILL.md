@@ -10,7 +10,7 @@ metadata:
     primaryEnv: SKILLSMP_API_KEY
 ---
 
-<!-- Version: 1.5.3 -->
+<!-- Version: 1.5.4 -->
 
 # Universal Skills Manager
 
@@ -50,7 +50,7 @@ This skill manages the following tools and scopes. Always verify these paths exi
 | **claude.ai** | Upload ZIP via Settings → Capabilities → Upload Skill |
 | **Claude Desktop** | Upload ZIP via Settings → Capabilities → Upload Skill |
 
-*Note: claude.ai and Claude Desktop don't have access to local environment variables. Use the "Package for claude.ai/Desktop" capability (Section 5) to embed your API key in the ZIP.*
+*Note: claude.ai and Claude Desktop don't have access to local environment variables. Use the "Package for claude.ai/Desktop" capability (Section 5) to create a ZIP. Embedding an API key is optional — SkillHub and ClawHub search work without one. If you do include a key, do NOT share the ZIP publicly (see Section 5 for credential safety guidance).*
 
 **IMPORTANT - Universal Skills Manager Platform Limitations:**
 
@@ -300,13 +300,22 @@ This skill (Universal Skills Manager) requires network access to call the Skills
 
 **Procedure:**
 1.  **Explain the Process:**
-    "I'll create a ZIP file with this skill ready for upload to claude.ai or Claude Desktop. Since cloud environments don't have access to your local environment variables, I'll embed your API key in the package."
+    "I'll create a ZIP file with this skill ready for upload to claude.ai or Claude Desktop. Since cloud environments don't have access to your local environment variables, I can optionally embed your API key in the package. Note: the API key is optional — SkillHub and ClawHub search work without one."
 
-2.  **Collect API Key:**
-    *   Ask: "Please provide your SkillsMP API key. You can get one at https://skillsmp.com"
-    *   Wait for user to provide the key
-    *   **Security:** Do not echo or display the key back to the user
-    *   **Note:** The API key is stored locally in `config.json` inside the ZIP package. It is never transmitted to any third-party server by this skill. The key is only used at runtime to authenticate with the SkillsMP API when searching for skills.
+2.  **Collect API Key (Optional):**
+    *   Ask: "Would you like to include your SkillsMP API key for curated search? This is optional — SkillHub (173k+ skills) and ClawHub (5,700+ versioned skills) work without a key. If you skip this, the packaged skill will still work for SkillHub and ClawHub searches."
+    *   If user wants to include a key:
+        -   Ask: "Please provide your SkillsMP API key. You can get one at https://skillsmp.com"
+        -   Wait for user to provide the key
+        -   **Security:** Do not echo or display the key back to the user
+    *   If user skips, create the ZIP without `config.json`
+    *   **Credential safety warning (IMPORTANT — always display this if a key is included):**
+        > "**Security note:** This ZIP will contain your API key in plain text. Please follow these precautions:
+        > - **Do NOT share** this ZIP publicly, post it online, or commit it to version control
+        > - **Do NOT distribute** this ZIP to others — each user should package their own
+        > - **Use a scoped/least-privilege key** if your provider supports it
+        > - **Rotate your key** if you suspect the ZIP was exposed
+        > - The key is stored locally in `config.json` inside the ZIP and is only used at runtime to authenticate with the SkillsMP API"
 
 3.  **Create Package Contents:**
     *   Create a temporary directory structure:
@@ -369,7 +378,8 @@ This skill (Universal Skills Manager) requires network access to call the Skills
     *   "5. Enable the skill and start using it!"
 
 6.  **Security Reminder:**
-    *   "Note: This ZIP contains your API key. Do not share it publicly or commit it to version control."
+    *   If a key was embedded: "This ZIP contains your API key. Do NOT share it publicly, distribute it to others, or commit it to version control. If you need to share the skill, create a key-free version (without `config.json`) and let each user add their own key."
+    *   If no key was embedded: "This ZIP is safe to share — it contains no credentials. Recipients can add their own API key later, or use SkillHub/ClawHub search which requires no key."
 
 ## Operational Rules
 
