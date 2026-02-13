@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.3] - 2026-02-13
+
+### Added
+- **Cline support**: Added Cline as the 10th supported AI tool. User scope: `~/.cline/skills/`, Project scope: `./.cline/skills/`. Cline uses the same `SKILL.md` format with `name` and `description` frontmatter — no manifest generation required.
+- Cline detection in `install.sh` one-liner installer (`--tools cline`).
+- Cline included in Skill Matrix Report tool detection and skill collection.
+- Cross-Platform Adaptation note: Cline also reads `.claude/skills/` at the project level, so Claude Code project skills work in Cline automatically.
+
 ## [1.5.0] - 2026-02-10
 
 ### Added

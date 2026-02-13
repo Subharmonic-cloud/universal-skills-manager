@@ -101,7 +101,7 @@ Options:
   --tools LIST      Comma-separated list of tools to install to
                     (skips auto-detection)
                     Valid: claude,gemini,antigravity,opencode,openclaw,
-                           codex,goose,roo,cursor
+                           codex,goose,roo,cursor,cline
 
 Examples:
   sh install.sh                        # Auto-detect and install
@@ -173,6 +173,7 @@ detect_tools() {
     check_tool "block/goose"    "$HOME/.config/goose"           "$HOME/.config/goose/skills"
     check_tool "Roo Code"       "$HOME/.roo"                    "$HOME/.roo/skills"
     check_tool "Cursor"         "$HOME/.cursor"                 "$HOME/.cursor/skills"
+    check_tool "Cline"          "$HOME/.cline"                  "$HOME/.cline/skills"
 
     if [ "$DETECTED_COUNT" -eq 0 ]; then
         echo ""
@@ -224,6 +225,7 @@ filter_tools() {
             goose)        match="block/goose" ;;
             roo)          match="Roo Code" ;;
             cursor)       match="Cursor" ;;
+            cline)        match="Cline" ;;
             *)
                 warn "Unknown tool: $short_name (skipping)"
                 continue

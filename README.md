@@ -15,7 +15,7 @@
 
 ---
 
-**v1.5.0** · Three-source skill discovery · 9 supported AI tools · Hardened security scanning
+**v1.5.3** · Three-source skill discovery · 10 supported AI tools · Hardened security scanning
 
 A centralized skill manager for AI coding assistants. Discovers, installs, and synchronizes skills from multiple sources — [SkillsMP.com](https://skillsmp.com) (curated, AI semantic search), [SkillHub](https://skills.palebluedot.live) (173k+ community skills, no API key required), and [ClawHub](https://clawhub.ai) (5,700+ versioned skills, semantic search, no API key required) — across multiple AI tools including Claude Code, OpenAI Codex, Gemini CLI, and more.
 
@@ -99,7 +99,7 @@ The installer will:
 4. Install to all detected tools (or just the ones you specify)
 5. Optionally set up your SkillsMP API key
 
-**Supported `--tools` values:** `claude`, `gemini`, `antigravity`, `opencode`, `openclaw`, `codex`, `goose`, `roo`, `cursor`
+**Supported `--tools` values:** `claude`, `gemini`, `antigravity`, `opencode`, `openclaw`, `codex`, `goose`, `roo`, `cursor`, `cline`
 
 > **Note:** The installer automatically installs to **all** detected AI tools without prompting for confirmation. If you only want to install to specific tools, use the `--tools` flag to target them explicitly.
 
@@ -119,6 +119,7 @@ Copy the `universal-skills-manager` folder to your tool's skills directory:
 | **Gemini CLI** | `~/.gemini/skills/` |
 | **Google Anti-Gravity** | `~/.gemini/antigravity/skills/` |
 | **Cursor** | `~/.cursor/skills/` |
+| **Cline** | `~/.cline/skills/` |
 | **Roo Code** | `~/.roo/skills/` |
 | **OpenCode** | `~/.config/opencode/skills/` |
 | **OpenClaw** | `~/.openclaw/workspace/skills/` |
@@ -332,6 +333,7 @@ The AI will:
 | **OpenAI Codex** | `~/.codex/skills/` | `./.codex/skills/` |
 | **block/goose** | `~/.config/goose/skills/` | `./.goose/agents/` |
 | **Roo Code** | `~/.roo/skills/` | `./.roo/skills/` |
+| **Cline** | `~/.cline/skills/` | `./.cline/skills/` |
 
 ## claude.ai and Claude Desktop
 
