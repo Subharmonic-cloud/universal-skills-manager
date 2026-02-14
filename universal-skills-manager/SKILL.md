@@ -57,14 +57,16 @@ This skill (Universal Skills Manager) requires network access to call the Skills
 - **If user asks to package/ZIP the Universal Skills Manager itself for claude.ai:**
   Tell the user: "The Universal Skills Manager won't work on claude.ai because it requires network access to call the SkillsMP API, SkillHub API, ClawHub API, and GitHub APIs. claude.ai's code execution environment doesn't allow outbound network requests. However, I can package OTHER skills for claude.ai upload - those will work as long as they don't require network access."
 
-- **If user wants to try the Universal Skills Manager on Claude Desktop with Coworker:**
-  Tell the user: "Claude Desktop with Coworker has network access capabilities. To use the Universal Skills Manager there, you may need to extend network access to these domains in your Cowork settings:
+- **If user wants to try the Universal Skills Manager on Claude Desktop:**
+  Tell the user: "Claude Desktop has network access capabilities, but there is a **known bug** where custom domains added to the 'Additional allowed domains' setting are not included in the network egress JWT token. This means the skill cannot reach the required APIs even after whitelisting them.
+
+  **Required domains** (for when the bug is fixed):
   - `skillsmp.com` (for SkillsMP skill searches)
   - `skills.palebluedot.live` (for SkillHub skill searches)
   - `clawhub.ai` (for ClawHub skill searches and direct file downloads)
   - `api.github.com` and `raw.githubusercontent.com` (for skill downloads from GitHub)
-  
-  This is experimental - Cowork's default network access is restricted. Check your Cowork network egress settings."
+
+  **Workaround:** Use Claude Code CLI instead, which has unrestricted network access and works with all three skill sources. You can install via: `curl -fsSL https://raw.githubusercontent.com/jacob-bd/universal-skills-manager/main/install.sh | sh -s -- --tools claude`"
 
 *(Note: If a tool uses a different directory structure, ask the user to confirm the path, then note it for future reference.)*
 

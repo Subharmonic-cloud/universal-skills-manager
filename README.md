@@ -342,6 +342,8 @@ The AI will:
 
 For use in claude.ai or Claude Desktop (web-based environments), the skill requires special packaging since environment variables are not available.
 
+> **Known Limitation (Claude Desktop):** Claude Desktop has a [known bug](https://github.com/anthropics/claude-code/issues) where custom domains added to the network egress whitelist are not included in the JWT token. This means the skill cannot reach SkillsMP, SkillHub, or ClawHub APIs even when the domains are whitelisted. Until this is fixed, **Claude Code CLI is the recommended way to use this skill** -- it has unrestricted network access and works with all three skill sources.
+
 **Option 1: On-Demand Packaging (Recommended)**
 
 If you have the skill installed in Claude Code, simply ask:
