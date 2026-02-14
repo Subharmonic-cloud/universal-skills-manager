@@ -1,9 +1,10 @@
 ---
 name: universal-skills-manager
 description: "The master coordinator for AI skills. Discovers skills from multiple sources (SkillsMP.com, SkillHub, and ClawHub), manages installation, and synchronization across Claude Code, Gemini CLI, Google Anti-Gravity, OpenCode, and other AI tools. Handles User-level (Global) and Project-level (Local) scopes."
+compatibility: "Requires python3, curl, and network access to skillsmp.com, skills.palebluedot.live, clawhub.ai, and github.com"
 metadata:
   homepage: https://github.com/jacob-bd/universal-skills-manager
-  disable-model-invocation: true
+  disable-model-invocation: "true"
   requires-bins: "python3, curl"
   primaryEnv: SKILLSMP_API_KEY
 ---
@@ -305,7 +306,10 @@ This skill (Universal Skills Manager) requires network access to call the Skills
 1.  **Explain the Process:**
     "I'll create a ZIP file with this skill ready for upload to claude.ai or Claude Desktop. Since cloud environments don't have access to your local environment variables, I can optionally embed your API key in the package. Note: the API key is optional — SkillHub and ClawHub search work without one."
 
-2.  **Collect API Key (Optional):**
+2.  **Validate Frontmatter Compatibility (CRITICAL — do this BEFORE packaging):**
+    Run the claude.ai/Desktop compatibility check (see Operational Rule 5). If the SKILL.md has unsupported frontmatter keys, nested metadata, or constraint violations, **fix them before creating the ZIP**. Tell the user what was fixed.
+
+3.  **Collect API Key (Optional):**
     *   Ask: "Would you like to include your SkillsMP API key for curated search? This is optional — SkillHub and ClawHub work without a key. If you skip this, the packaged skill will still work for SkillHub and ClawHub searches."
     *   If user wants to include a key:
         -   Ask: "Please provide your SkillsMP API key. You can get one at https://skillsmp.com"
@@ -321,7 +325,7 @@ This skill (Universal Skills Manager) requires network access to call the Skills
         > - **Rotate your key** if you suspect the ZIP was exposed
         > - The key is stored locally in `config.json` inside the ZIP and is only used at runtime to authenticate with the SkillsMP API"
 
-3.  **Create Package Contents:**
+4.  **Create Package Contents:**
     *   Create a temporary directory structure:
         ```
         universal-skills-manager/
@@ -337,7 +341,7 @@ This skill (Universal Skills Manager) requires network access to call the Skills
         }
         ```
 
-4.  **Create ZIP File:**
+5.  **Create ZIP File:**
     *   Use Python to create the ZIP:
         ```python
         import zipfile
@@ -373,7 +377,7 @@ This skill (Universal Skills Manager) requires network access to call the Skills
         ```
     *   Alternatively, provide the ZIP as a downloadable artifact
 
-5.  **Provide Upload Instructions:**
+6.  **Provide Upload Instructions:**
     *   "Your skill package is ready! To use it:"
     *   "1. Download the ZIP file: `universal-skills-manager.zip`"
     *   "2. Go to claude.ai → Settings → Capabilities"
@@ -381,7 +385,7 @@ This skill (Universal Skills Manager) requires network access to call the Skills
     *   "4. Select the ZIP file and upload"
     *   "5. Enable the skill and start using it!"
 
-6.  **Security Reminder:**
+7.  **Security Reminder:**
     *   If a key was embedded: "This ZIP contains your API key. Do NOT share it publicly, distribute it to others, or commit it to version control. If you need to share the skill, create a key-free version (without `config.json`) and let each user add their own key."
     *   If no key was embedded: "This ZIP is safe to share — it contains no credentials. Recipients can add their own API key later, or use SkillHub/ClawHub search which requires no key."
 
@@ -394,6 +398,38 @@ This skill (Universal Skills Manager) requires network access to call the Skills
     *   Gemini uses `SKILL.md`.
     *   Cline uses the same `SKILL.md` format with `name` and `description` frontmatter. The `name` field must match the directory name. No manifest generation required. Note: Cline also reads `.claude/skills/` at the project level, so Claude Code project skills work in Cline automatically.
     *   If OpenCode or Anti-Gravity require a specific manifest (e.g., `manifest.json`), generate a basic one based on the `SKILL.md` frontmatter during installation.
+5.  **claude.ai / Claude Desktop Frontmatter Compatibility Check:**
+    When a user wants to upload or package a skill for **claude.ai** or **Claude Desktop**, validate the SKILL.md frontmatter against the [Agent Skills specification](https://agentskills.io/specification). Claude Desktop's validator is strict and will reject non-compliant skills with "malformed YAML frontmatter" or "unexpected key" errors.
+
+    **Allowed top-level frontmatter fields (Agent Skills spec):**
+
+    | Field | Required | Constraints |
+    | :--- | :--- | :--- |
+    | `name` | Yes | Max 64 chars, lowercase letters/numbers/hyphens only, must match directory name |
+    | `description` | Yes | Max 1024 chars |
+    | `license` | No | License name or reference to bundled file |
+    | `compatibility` | No | Max 500 chars, environment requirements |
+    | `metadata` | No | Flat key-value pairs only (string keys to string values — no nested objects, no arrays) |
+    | `allowed-tools` | No | Space-delimited list of pre-approved tools (experimental) |
+
+    **Validation procedure:**
+    1.  Read the SKILL.md frontmatter
+    2.  Check all top-level keys are in the allowed set: `name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools`
+    3.  If `metadata` is present, verify all values are strings (no nested objects or arrays)
+    4.  Verify `name` is lowercase with hyphens only, max 64 chars
+    5.  Verify `description` is max 1024 chars
+
+    **If validation fails**, tell the user exactly what's wrong and offer to fix it:
+    > "This skill's YAML frontmatter isn't compatible with claude.ai/Claude Desktop. I found these issues:
+    > - [list specific issues, e.g., 'unsupported top-level key: version', 'metadata contains nested objects']
+    >
+    > I can fix the frontmatter to make it compatible. Non-standard fields will be moved into `metadata` as flat string values. Want me to proceed?"
+
+    **Common fixes:**
+    -   Move unsupported top-level keys (e.g., `version`, `author`, `homepage`, `category`) into `metadata` as string values
+    -   Flatten nested `metadata` objects (e.g., `metadata.clawdbot.requires.bins: [x, y]` → `metadata.requires-bins: "x, y"`)
+    -   Convert non-string metadata values to strings (e.g., `true` → `"true"`)
+    -   Truncate `description` if over 1024 chars
 
 ## Available Tools
 - `bash` (curl): Make API calls to SkillsMP.com, SkillHub (skills.palebluedot.live), and ClawHub (clawhub.ai); fetch skill content from GitHub or ClawHub directly.
