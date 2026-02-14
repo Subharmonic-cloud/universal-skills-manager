@@ -26,6 +26,7 @@ universal-skills-manager/
 ├── SECURITY.md                     # Security policy and vulnerability reporting
 ├── specs.md                        # Technical specification for install script
 ├── docs/
+│   ├── TECHNICAL.md                # Technical reference (APIs, scripts, security details)
 │   ├── scan_skill-security-analysis.md  # Full security analysis of scanner
 │   └── remediation-final-code-review.md # Code review of security hardening
 ├── tests/
@@ -35,7 +36,8 @@ universal-skills-manager/
     ├── SKILL.md                    # Skill definition and logic
     └── scripts/
         ├── install_skill.py        # Python helper for downloading skills from GitHub
-        └── scan_skill.py           # Security scanner (20+ detection categories)
+        ├── scan_skill.py           # Security scanner (20+ detection categories)
+        └── validate_frontmatter.py # claude.ai/Desktop YAML frontmatter validator
 ```
 
 ### Skill Structure
@@ -193,6 +195,8 @@ The skill maintains consistency by:
 - **Skill definition**: `universal-skills-manager/SKILL.md` - The main skill logic and instructions
 - **Install helper**: `universal-skills-manager/scripts/install_skill.py` - Python script for downloading skills from GitHub
 - **Security scanner**: `universal-skills-manager/scripts/scan_skill.py` - Security scanner with 20+ detection categories
+- **Frontmatter validator**: `universal-skills-manager/scripts/validate_frontmatter.py` - claude.ai/Desktop YAML frontmatter validator and fixer
+- **Technical reference**: `docs/TECHNICAL.md` - API reference, script usage, security details, frontmatter spec
 - **Test suite**: `tests/test_scan_skill.py` - 62 tests covering all scanner detection categories
 - **Security policy**: `SECURITY.md` - Vulnerability reporting and security architecture
 - **User documentation**: `README.md` - Installation, configuration, and usage guide
