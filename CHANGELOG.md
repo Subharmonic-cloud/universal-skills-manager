@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.6] - 2026-02-14
+
+### Fixed
+- **YAML frontmatter compatibility with Claude Desktop**: Claude Desktop's skill upload validator only accepts flat key-value pairs inside `metadata` — nested objects and arrays cause "malformed YAML frontmatter" errors. Moved `homepage` and `disable-model-invocation` into `metadata` as flat keys, flattened `clawdbot.requires.bins` array to a comma-separated string (`requires-bins`), and quoted the `description` string.
+- **API key validation in SKILL.md**: Added `sk_live_skillsmp_` prefix validation to both the runtime search flow (Section 1) and ZIP packaging flow (Section 5). Invalid keys are now rejected with a helpful message.
+- **Removed hardcoded skill counts**: Stripped "173k+" and "5,700+" numbers from SKILL.md, README.md, CLAUDE.md, and install.sh — these go stale quickly.
+
+### Changed
+- **Documented Claude Desktop network egress bug**: Claude Desktop has a known bug where custom domains added to the network egress whitelist are not included in the JWT token. The skill cannot reach SkillsMP/SkillHub/ClawHub APIs even when whitelisted. Added workaround guidance (use Claude Code CLI) to SKILL.md and README.
+- **README**: Added piped one-liner example for single-tool install (`curl ... | sh -s -- --tools codex`).
+
 ## [1.5.5] - 2026-02-14
 
 ### Fixed
@@ -14,8 +25,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **`install.sh` API key validation**: Added prefix validation — keys must start with `sk_live_skillsmp_`. Invalid keys are rejected with an error message instead of being silently saved.
-- **Removed hardcoded skill counts from installer**: Stripped "173k+" and "5,700+" numbers from SkillHub/ClawHub references in installer messages since they go stale quickly.
-- **README**: Added piped one-liner example for single-tool install (`curl ... | sh -s -- --tools codex`).
 
 ### Credits
 - Thanks to `@GuyJames` on YouTube for reporting the API key prompt and `--tools` flag bugs.
