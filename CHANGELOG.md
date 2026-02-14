@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.7] - 2026-02-14
+
+### Added
+- **claude.ai / Claude Desktop frontmatter compatibility check**: New Operational Rule 5 validates SKILL.md frontmatter against the [Agent Skills specification](https://agentskills.io/specification) before packaging for upload. Checks allowed top-level keys (`name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools`), enforces flat string values in `metadata`, and validates `name`/`description` length limits. Offers auto-fix for non-compliant skills (moves unsupported keys into `metadata`, flattens nested objects, truncates long descriptions).
+- **`compatibility` field** added to our own frontmatter declaring runtime requirements (python3, curl, network access to skillsmp.com, skills.palebluedot.live, clawhub.ai, github.com).
+- Frontmatter validation step (Step 2) added to Section 5 packaging flow — runs before ZIP creation.
+
 ## [1.5.6] - 2026-02-14
 
 ### Fixed

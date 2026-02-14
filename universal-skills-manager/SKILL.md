@@ -9,7 +9,7 @@ metadata:
   primaryEnv: SKILLSMP_API_KEY
 ---
 
-<!-- Version: 1.5.6 -->
+<!-- Version: 1.5.7 -->
 
 # Universal Skills Manager
 
