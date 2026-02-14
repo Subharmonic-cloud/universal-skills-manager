@@ -9,7 +9,7 @@ metadata:
   primaryEnv: SKILLSMP_API_KEY
 ---
 
-<!-- Version: 1.5.7 -->
+<!-- Version: 1.5.8 -->
 
 # Universal Skills Manager
 
@@ -307,7 +307,18 @@ This skill (Universal Skills Manager) requires network access to call the Skills
     "I'll create a ZIP file with this skill ready for upload to claude.ai or Claude Desktop. Since cloud environments don't have access to your local environment variables, I can optionally embed your API key in the package. Note: the API key is optional — SkillHub and ClawHub search work without one."
 
 2.  **Validate Frontmatter Compatibility (CRITICAL — do this BEFORE packaging):**
-    Run the claude.ai/Desktop compatibility check (see Operational Rule 5). If the SKILL.md has unsupported frontmatter keys, nested metadata, or constraint violations, **fix them before creating the ZIP**. Tell the user what was fixed.
+    Run `validate_frontmatter.py` to check the SKILL.md against the Agent Skills spec:
+    ```bash
+    # Validate only (report issues)
+    python3 scripts/validate_frontmatter.py /path/to/SKILL.md
+
+    # Validate and auto-fix (overwrites file)
+    python3 scripts/validate_frontmatter.py /path/to/SKILL.md --fix
+
+    # Validate a ZIP file
+    python3 scripts/validate_frontmatter.py /path/to/skill.zip --fix
+    ```
+    The script checks for unsupported top-level keys, nested metadata, non-string metadata values, and field length violations. With `--fix`, it automatically moves unsupported keys into `metadata`, flattens nested objects, and converts values to strings. Tell the user what was fixed. See Operational Rule 5 for the full spec.
 
 3.  **Collect API Key (Optional):**
     *   Ask: "Would you like to include your SkillsMP API key for curated search? This is optional — SkillHub and ClawHub work without a key. If you skip this, the packaged skill will still work for SkillHub and ClawHub searches."
@@ -412,24 +423,34 @@ This skill (Universal Skills Manager) requires network access to call the Skills
     | `metadata` | No | Flat key-value pairs only (string keys to string values — no nested objects, no arrays) |
     | `allowed-tools` | No | Space-delimited list of pre-approved tools (experimental) |
 
-    **Validation procedure:**
+    **Use the validation script (preferred — avoids manual YAML errors):**
+    ```bash
+    # Validate a SKILL.md
+    python3 scripts/validate_frontmatter.py /path/to/SKILL.md
+
+    # Validate and auto-fix in place
+    python3 scripts/validate_frontmatter.py /path/to/SKILL.md --fix
+
+    # Validate and fix a ZIP file (rewrites SKILL.md inside the ZIP)
+    python3 scripts/validate_frontmatter.py /path/to/skill.zip --fix
+    ```
+    The script (`scripts/validate_frontmatter.py`) is zero-dependency Python 3. It checks all constraints and with `--fix` automatically applies these corrections:
+    -   Moves unsupported top-level keys (e.g., `version`, `author`, `homepage`, `category`) into `metadata` as string values
+    -   Flattens nested `metadata` objects (e.g., `metadata.clawdbot.requires.bins: [x, y]` → `metadata.clawdbot-requires-bins: "x, y"`)
+    -   Converts non-string metadata values to quoted strings (e.g., `true` → `"true"`)
+    -   Collapses YAML block scalar descriptions (`|` or `>`) to simple inline quoted strings (Claude Desktop's parser rejects block scalars)
+    -   Converts YAML list-format `allowed-tools` to space-delimited string
+    -   Truncates `description` if over 1024 chars
+    -   Validates the fix and reports if any issues remain
+
+    **If the script is not available**, do the validation manually:
     1.  Read the SKILL.md frontmatter
     2.  Check all top-level keys are in the allowed set: `name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools`
     3.  If `metadata` is present, verify all values are strings (no nested objects or arrays)
     4.  Verify `name` is lowercase with hyphens only, max 64 chars
     5.  Verify `description` is max 1024 chars
 
-    **If validation fails**, tell the user exactly what's wrong and offer to fix it:
-    > "This skill's YAML frontmatter isn't compatible with claude.ai/Claude Desktop. I found these issues:
-    > - [list specific issues, e.g., 'unsupported top-level key: version', 'metadata contains nested objects']
-    >
-    > I can fix the frontmatter to make it compatible. Non-standard fields will be moved into `metadata` as flat string values. Want me to proceed?"
-
-    **Common fixes:**
-    -   Move unsupported top-level keys (e.g., `version`, `author`, `homepage`, `category`) into `metadata` as string values
-    -   Flatten nested `metadata` objects (e.g., `metadata.clawdbot.requires.bins: [x, y]` → `metadata.requires-bins: "x, y"`)
-    -   Convert non-string metadata values to strings (e.g., `true` → `"true"`)
-    -   Truncate `description` if over 1024 chars
+    **If validation fails**, tell the user exactly what's wrong and offer to fix it (run the script with `--fix`, or apply the fixes manually).
 
 ## Available Tools
 - `bash` (curl): Make API calls to SkillsMP.com, SkillHub (skills.palebluedot.live), and ClawHub (clawhub.ai); fetch skill content from GitHub or ClawHub directly.

@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.8] - 2026-02-14
+
+### Added
+- **`validate_frontmatter.py` script**: New zero-dependency Python script that validates SKILL.md YAML frontmatter against the [Agent Skills specification](https://agentskills.io/specification) for claude.ai/Claude Desktop compatibility. Detects unsupported top-level keys, nested metadata, block scalar descriptions, list-format `allowed-tools`, and field length violations. With `--fix`, automatically corrects all issues. Works on both `.md` files and `.zip` archives.
+
+### Changed
+- **SKILL.md**: Added `compatibility` field to frontmatter. Updated Operational Rule 5 and Section 5 packaging flow to use `validate_frontmatter.py`. Added block scalar and list-format `allowed-tools` detection to the compatibility spec documentation.
+
 ## [1.5.7] - 2026-02-14
 
 ### Added
