@@ -410,7 +410,7 @@ check_api_key() {
 
         # Validate key prefix
         case "$api_key" in
-            sk_live_skillsmp_*|sk_test_skillsmp_*)
+            sk_live_skillsmp_*)
                 ;;
             *)
                 error "Invalid API key format. SkillsMP keys start with 'sk_live_skillsmp_'"

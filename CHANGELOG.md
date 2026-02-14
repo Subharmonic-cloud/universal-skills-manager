@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`install.sh` tool names with spaces caused bad word-splitting**: Multi-word tool names like "Claude Code", "Gemini CLI", and "OpenAI Codex" were split into separate tokens when iterating the space-separated tool list (e.g., "Claude" and "Code|/path" as two entries). Switched `DETECTED_TOOLS` from space-separated to newline-separated entries, with proper `IFS` management in all loops.
 
 ### Changed
-- **`install.sh` API key validation**: Added prefix validation — keys must start with `sk_live_skillsmp_` (or `sk_test_skillsmp_`). Invalid keys are rejected with an error message instead of being silently saved.
+- **`install.sh` API key validation**: Added prefix validation — keys must start with `sk_live_skillsmp_`. Invalid keys are rejected with an error message instead of being silently saved.
 - **Removed hardcoded skill counts from installer**: Stripped "173k+" and "5,700+" numbers from SkillHub/ClawHub references in installer messages since they go stale quickly.
 - **README**: Added piped one-liner example for single-tool install (`curl ... | sh -s -- --tools codex`).
 

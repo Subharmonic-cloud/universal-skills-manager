@@ -155,7 +155,7 @@ This skill (Universal Skills Manager) requires network access to call the Skills
         -   If user chooses **B**: Proceed with SkillHub search (no key needed)
         -   If user chooses **C**: Proceed with ClawHub search (no key needed)
 
-    *   **Key Validation:** SkillsMP API keys always start with `sk_live_skillsmp_` (or `sk_test_skillsmp_` for test keys). If the user provides a key that does not match this prefix, reject it immediately:
+    *   **Key Validation:** SkillsMP API keys always start with `sk_live_skillsmp_`. If the user provides a key that does not match this prefix, reject it immediately:
         > "That doesn't look like a valid SkillsMP API key. Keys start with `sk_live_skillsmp_`. You can get one at https://skillsmp.com — or choose SkillHub/ClawHub search instead (no key needed)."
 
     *   **Security:** Never log, display, or echo the full API key value.
@@ -310,7 +310,7 @@ This skill (Universal Skills Manager) requires network access to call the Skills
     *   If user wants to include a key:
         -   Ask: "Please provide your SkillsMP API key. You can get one at https://skillsmp.com"
         -   Wait for user to provide the key
-        -   **Validate:** Key must start with `sk_live_skillsmp_` (or `sk_test_skillsmp_`). If invalid, reject and re-prompt or offer to skip.
+        -   **Validate:** Key must start with `sk_live_skillsmp_`. If invalid, reject and re-prompt or offer to skip.
         -   **Security:** Do not echo or display the key back to the user
     *   If user skips, create the ZIP without `config.json`
     *   **Credential safety warning (IMPORTANT — always display this if a key is included):**
