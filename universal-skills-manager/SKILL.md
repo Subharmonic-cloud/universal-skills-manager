@@ -104,6 +104,38 @@ This skill (Universal Skills Manager) requires network access to call the Skills
 4.  **Determine Primary Target:**
     *   Ask: "Should this be installed Globally (User) or Locally (Project)?"
     *   Determine the primary tool (e.g., if user is in Claude Code, Claude is primary)
+    *   **If the user specifies claude.ai or Claude Desktop as the target**, go to Step 4a instead of Step 5.
+
+    **4a. Claude Desktop / claude.ai Target Flow:**
+    If the user wants the skill for claude.ai or Claude Desktop:
+    1.  **Validate frontmatter** by running `validate_frontmatter.py` against the downloaded SKILL.md:
+        ```bash
+        python3 scripts/validate_frontmatter.py /path/to/downloaded/SKILL.md
+        ```
+    2.  **If the skill passes validation**, package it as a ZIP and provide upload instructions (see Step 6a below).
+    3.  **If the skill fails validation**, notify the user with the exact issues before doing anything:
+        > "This skill isn't formatted correctly for Claude Desktop. I found these issues:
+        > - [list each issue from the validator, e.g., 'Unsupported top-level key: version', 'Description uses a YAML block scalar']
+        >
+        > I can fix these automatically — unsupported keys will be moved into metadata, block scalars will be converted to inline strings, etc. The skill's functionality won't change.
+        >
+        > Would you like me to fix it and package it for Claude Desktop?"
+    4.  **If the user agrees**: Run the fix and re-validate:
+        ```bash
+        python3 scripts/validate_frontmatter.py /path/to/downloaded/SKILL.md --fix
+        ```
+        Then package as ZIP (Step 6a).
+    5.  **If the user declines**: Skip Claude Desktop. Offer to install the skill as-is to other locally detected tools instead.
+
+    **6a. Package and deliver ZIP:**
+    *   Create a ZIP containing the skill folder (with fixed SKILL.md if applicable)
+    *   Provide upload instructions:
+        > "Your skill is packaged and ready. To install on Claude Desktop:
+        > 1. Go to Settings → Capabilities
+        > 2. Click 'Upload skill' in the Skills section
+        > 3. Select the ZIP file and upload"
+    *   Continue to Step 5 to offer syncing to other local tools as well.
+
 5.  **The "Sync Check" (CRITICAL):**
     *   **Scan:** Check if other supported tools are installed on the system (look for their config folders)
     *   **Propose:** "I see you also have OpenCode and Cursor installed. Do you want to sync this skill to them as well?"
