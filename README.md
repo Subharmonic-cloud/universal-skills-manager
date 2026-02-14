@@ -17,7 +17,7 @@
 
 **v1.5.5** · Three-source skill discovery · 10 supported AI tools · Hardened security scanning
 
-A centralized skill manager for AI coding assistants. Discovers, installs, and synchronizes skills from multiple sources — [SkillsMP.com](https://skillsmp.com) (curated, AI semantic search), [SkillHub](https://skills.palebluedot.live) (173k+ community skills, no API key required), and [ClawHub](https://clawhub.ai) (5,700+ versioned skills, semantic search, no API key required) — across multiple AI tools including Claude Code, OpenAI Codex, Gemini CLI, and more.
+A centralized skill manager for AI coding assistants. Discovers, installs, and synchronizes skills from multiple sources — [SkillsMP.com](https://skillsmp.com) (curated, AI semantic search), [SkillHub](https://skills.palebluedot.live) (community skills, no API key required), and [ClawHub](https://clawhub.ai) (versioned skills, semantic search, no API key required) — across multiple AI tools including Claude Code, OpenAI Codex, Gemini CLI, and more.
 
 ## Demo
 
@@ -36,7 +36,7 @@ This video covers:
 
 ## Features
 
-- 🔍 **Multi-Source Search**: Find skills from SkillsMP (curated, AI semantic search), SkillHub (173k+ community catalog), and ClawHub (5,700+ versioned skills, semantic search) — no API key needed for SkillHub or ClawHub
+- 🔍 **Multi-Source Search**: Find skills from SkillsMP (curated, AI semantic search), SkillHub (community catalog), and ClawHub (versioned skills, semantic search) — no API key needed for SkillHub or ClawHub
 - 📦 **One-Click Install**: Download and validate skills with atomic installation (temp → validate → install)
 - 🛡️ **Security Scanning**: 20+ detection categories across 3 severity levels — catches invisible Unicode, data exfiltration, shell injection, prompt injection, homoglyphs, hardcoded secrets, and more
 - 🔄 **Cross-Tool Sync**: Automatically sync skills across all your installed AI tools
@@ -182,7 +182,7 @@ python3 path/to/install_skill.py \
 
 ### API Key Setup
 
-The Universal Skills Manager uses a SkillsMP API key for curated search with AI semantic matching. **The API key is optional** — without it, you can still search SkillHub's open catalog of 173k+ community skills and ClawHub's 5,700+ versioned skills with semantic search.
+The Universal Skills Manager uses a SkillsMP API key for curated search with AI semantic matching. **The API key is optional** — without it, you can still search SkillHub's open catalog and ClawHub's versioned skills with semantic search.
 
 #### Option 1: Shell Profile (Recommended)
 

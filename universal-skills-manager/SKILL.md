@@ -14,7 +14,7 @@ metadata:
 
 # Universal Skills Manager
 
-This skill empowers the agent to act as a centralized skill manager for AI capabilities. It discovers skills from multiple sources — SkillsMP.com (curated, AI semantic search), SkillHub (173k+ community skills, no API key required), and ClawHub (5,700+ versioned skills, semantic search, no API key required) — and unifies skill management across multiple AI tools (Claude Code, Gemini, Anti-Gravity, OpenCode, Cline, Cursor, etc.), ensuring consistency and synchronization.
+This skill empowers the agent to act as a centralized skill manager for AI capabilities. It discovers skills from multiple sources — SkillsMP.com (curated, AI semantic search), SkillHub (community skills, no API key required), and ClawHub (versioned skills, semantic search, no API key required) — and unifies skill management across multiple AI tools (Claude Code, Gemini, Anti-Gravity, OpenCode, Cline, Cursor, etc.), ensuring consistency and synchronization.
 
 ## When to Use This Skill
 
@@ -145,15 +145,18 @@ This skill (Universal Skills Manager) requires network access to call the Skills
         >
         > A) Provide your SkillsMP API key (get one at skillsmp.com) — curated skills with AI semantic search
         >
-        > B) Search SkillHub's open catalog — 173k+ community skills, no API key needed
+        > B) Search SkillHub's open catalog — community skills, no API key needed
         >
-        > C) Search ClawHub — 5,700+ versioned skills with semantic search, no API key needed
+        > C) Search ClawHub — versioned skills with semantic search, no API key needed
         >
         > Which would you prefer?"
 
-        -   If user chooses **A**: Collect key, store in memory for this session, proceed with SkillsMP
+        -   If user chooses **A**: Collect key, **validate it** (see below), store in memory for this session, proceed with SkillsMP
         -   If user chooses **B**: Proceed with SkillHub search (no key needed)
         -   If user chooses **C**: Proceed with ClawHub search (no key needed)
+
+    *   **Key Validation:** SkillsMP API keys always start with `sk_live_skillsmp_` (or `sk_test_skillsmp_` for test keys). If the user provides a key that does not match this prefix, reject it immediately:
+        > "That doesn't look like a valid SkillsMP API key. Keys start with `sk_live_skillsmp_`. You can get one at https://skillsmp.com — or choose SkillHub/ClawHub search instead (no key needed)."
 
     *   **Security:** Never log, display, or echo the full API key value.
 
@@ -303,10 +306,11 @@ This skill (Universal Skills Manager) requires network access to call the Skills
     "I'll create a ZIP file with this skill ready for upload to claude.ai or Claude Desktop. Since cloud environments don't have access to your local environment variables, I can optionally embed your API key in the package. Note: the API key is optional — SkillHub and ClawHub search work without one."
 
 2.  **Collect API Key (Optional):**
-    *   Ask: "Would you like to include your SkillsMP API key for curated search? This is optional — SkillHub (173k+ skills) and ClawHub (5,700+ versioned skills) work without a key. If you skip this, the packaged skill will still work for SkillHub and ClawHub searches."
+    *   Ask: "Would you like to include your SkillsMP API key for curated search? This is optional — SkillHub and ClawHub work without a key. If you skip this, the packaged skill will still work for SkillHub and ClawHub searches."
     *   If user wants to include a key:
         -   Ask: "Please provide your SkillsMP API key. You can get one at https://skillsmp.com"
         -   Wait for user to provide the key
+        -   **Validate:** Key must start with `sk_live_skillsmp_` (or `sk_test_skillsmp_`). If invalid, reject and re-prompt or offer to skip.
         -   **Security:** Do not echo or display the key back to the user
     *   If user skips, create the ZIP without `config.json`
     *   **Credential safety warning (IMPORTANT — always display this if a key is included):**

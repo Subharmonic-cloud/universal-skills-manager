@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This repository contains the **Universal Skills Manager** skill, which acts as a centralized skill manager for AI capabilities across multiple AI coding tools (Gemini CLI, Google Anti-Gravity, OpenCode, Claude Code, Cline, Cursor, etc.).
 
 The skill enables:
-- **Discovery**: Searching for skills from multiple sources — SkillsMP.com (curated, AI semantic search), SkillHub (173k+ community skills, no API key required), and ClawHub (5,700+ versioned skills, semantic search, no API key required)
+- **Discovery**: Searching for skills from multiple sources — SkillsMP.com (curated, AI semantic search), SkillHub (community skills, no API key required), and ClawHub (versioned skills, semantic search, no API key required)
 - **Installation**: Installing skills from GitHub or ClawHub to User-level (global) or Project-level (local) scopes
 - **Synchronization**: Copying/syncing skills across different AI tools
 - **Consistency**: Maintaining version consistency across installed locations
@@ -175,8 +175,8 @@ When installing a skill, the manager:
 
 Skills are discovered from multiple sources:
 - **SkillsMP.com** (primary, curated): Keyword search + AI semantic search, requires API key
-- **SkillHub** (secondary, community): Keyword search, no API key required, 173k+ auto-indexed skills
-- **ClawHub** (tertiary, versioned): Semantic/vector search, no API key required, 5,700+ versioned skills
+- **SkillHub** (secondary, community): Keyword search, no API key required
+- **ClawHub** (tertiary, versioned): Semantic/vector search, no API key required
 - **Method**: API calls using curl/bash, parse JSON responses, display results with metadata and source labels
 
 ### Synchronization Logic
