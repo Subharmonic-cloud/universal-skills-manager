@@ -82,9 +82,20 @@ def parse_frontmatter(content: str) -> tuple:
     data = _parse_yaml_minimal(raw_fm)
 
     # Detect block scalars in raw frontmatter (lost after parsing)
-    block_scalar_fields = []
-    for match in re.finditer(r"^([a-zA-Z0-9_-]+)\s*:\s*[|>]", raw_fm, re.MULTILINE):
-        block_scalar_fields.append(match.group(1))
+    # Track field name, scalar type (| or >), and whether it contains blank lines
+    block_scalar_fields = {}
+    for match in re.finditer(r"^([a-zA-Z0-9_-]+)\s*:\s*([|>])", raw_fm, re.MULTILINE):
+        field_name = match.group(1)
+        scalar_type = match.group(2)
+        # Check for blank lines within the block scalar content
+        start = match.end()
+        has_blank_lines = False
+        for line in raw_fm[start:].split("\n"):
+            if line.strip() == "":
+                has_blank_lines = True
+            elif line and not line[0].isspace():
+                break  # reached next top-level key
+        block_scalar_fields[field_name] = {"type": scalar_type, "has_blank_lines": has_blank_lines}
     data["_block_scalar_fields"] = block_scalar_fields
 
     # Detect list-format allowed-tools (should be space-delimited string)
@@ -357,21 +368,40 @@ def validate(data: dict) -> list:
     if at is not None and not isinstance(at, str) and not data.get("_allowed_tools_is_list"):
         issues.append({"level": "error", "field": "allowed-tools", "message": f"'allowed-tools' must be a space-delimited string, not a YAML list. Use: allowed-tools: Read Write Edit"})
 
-    # Check for block scalars in description (Claude Desktop's parser chokes on these)
-    block_fields = data.get("_block_scalar_fields", [])
+    # Check for block scalars in description
+    # Note: Testing (2026-02-14) confirmed that folded scalars (>) work in Claude Desktop.
+    # Literal scalars (|) with blank lines are known to fail. We flag:
+    #   - | with blank lines → error (known to fail)
+    #   - | without blank lines → warning (untested, may fail)
+    #   - > (any) → warning (works in testing, but inline strings are safest)
+    block_fields = data.get("_block_scalar_fields", {})
     if "description" in block_fields:
-        issues.append({
-            "level": "error",
-            "field": "description",
-            "message": "Description uses a YAML block scalar (| or >). Claude Desktop's parser rejects these — use a simple inline string instead"
-        })
+        info = block_fields["description"]
+        if info["type"] == "|" and info["has_blank_lines"]:
+            issues.append({
+                "level": "error",
+                "field": "description",
+                "message": "Description uses a literal block scalar (|) with blank lines — known to fail in Claude Desktop. Use a simple inline string instead"
+            })
+        elif info["type"] == "|":
+            issues.append({
+                "level": "warning",
+                "field": "description",
+                "message": "Description uses a literal block scalar (|) — may cause issues in Claude Desktop. Inline strings are safest"
+            })
+        else:
+            issues.append({
+                "level": "warning",
+                "field": "description",
+                "message": "Description uses a folded block scalar (>) — works in current Claude Desktop testing, but inline strings are safest for maximum compatibility"
+            })
     # Warn about block scalars in other fields too
-    for field in block_fields:
+    for field, info in block_fields.items():
         if field != "description" and field in ALLOWED_TOP_LEVEL_KEYS:
             issues.append({
                 "level": "warning",
                 "field": field,
-                "message": f"'{field}' uses a YAML block scalar (| or >) — may cause issues with strict parsers"
+                "message": f"'{field}' uses a YAML block scalar ({info['type']}) — may cause issues with strict parsers"
             })
 
     # Check for list-format allowed-tools

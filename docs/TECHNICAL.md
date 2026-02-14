@@ -288,7 +288,7 @@ Claude Desktop uses [`strictyaml`](https://hitchdev.com/strictyaml/) to parse SK
 | Field | Required | Constraints |
 |-------|----------|-------------|
 | `name` | Yes | Max 64 chars, lowercase letters/numbers/hyphens only, must match directory name |
-| `description` | Yes | Max 1024 chars. No angle brackets (`<` `>`). No block scalars (`\|` or `>`) -- inline strings only |
+| `description` | Yes | Max 1024 chars. No angle brackets (`<` `>`). Literal block scalars (`\|`) with blank lines fail. Folded scalars (`>`) work but inline strings are safest |
 | `license` | No | License name or reference to bundled file |
 | `compatibility` | No | Max 500 chars, environment requirements |
 | `metadata` | No | Flat string key-value pairs only (no nested objects, no arrays) |
@@ -311,7 +311,7 @@ python3 scripts/validate_frontmatter.py /path/to/skill.zip --fix
 
 **What `--fix` does:**
 - Moves unsupported top-level keys (e.g., `version`, `author`) into `metadata` as string values
-- Collapses YAML block scalar descriptions (`|` or `>`) to inline quoted strings
+- Collapses literal block scalar (`|`) descriptions to inline quoted strings (error if blank lines present). Folded scalars (`>`) trigger a warning but are not auto-fixed since they work in current Claude Desktop
 - Converts YAML list-format `allowed-tools` to space-delimited string
 - Strips angle brackets from description
 - Flattens nested `metadata` objects to flat string key-value pairs

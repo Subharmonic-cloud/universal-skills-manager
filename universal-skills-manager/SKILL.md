@@ -449,7 +449,7 @@ This skill (Universal Skills Manager) requires network access to call the Skills
     | Field | Required | Constraints |
     | :--- | :--- | :--- |
     | `name` | Yes | Max 64 chars, lowercase letters/numbers/hyphens only, must match directory name |
-    | `description` | Yes | Max 1024 chars. No angle brackets (`<` or `>`). No block scalars (`|` or `>`) — use inline strings only |
+    | `description` | Yes | Max 1024 chars. No angle brackets (`<` or `>`). Avoid literal block scalars (`|`) — known to fail with blank lines. Folded scalars (`>`) work but inline strings are safest |
     | `license` | No | License name or reference to bundled file |
     | `compatibility` | No | Max 500 chars, environment requirements |
     | `metadata` | No | Flat key-value pairs only (string keys to string values — no nested objects, no arrays) |
@@ -470,7 +470,7 @@ This skill (Universal Skills Manager) requires network access to call the Skills
     -   Moves unsupported top-level keys (e.g., `version`, `author`, `homepage`, `category`) into `metadata` as string values
     -   Flattens nested `metadata` objects (e.g., `metadata.clawdbot.requires.bins: [x, y]` → `metadata.clawdbot-requires-bins: "x, y"`)
     -   Converts non-string metadata values to quoted strings (e.g., `true` → `"true"`)
-    -   Collapses YAML block scalar descriptions (`|` or `>`) to simple inline quoted strings (Claude Desktop uses `strictyaml` which rejects block scalars)
+    -   Collapses literal block scalar (`|`) descriptions to inline quoted strings (known to fail with blank lines). Folded scalars (`>`) trigger a warning but work in current Claude Desktop
     -   Strips angle brackets (`<` `>`) from description (Anthropic's validator rejects them)
     -   Converts YAML list-format `allowed-tools` to space-delimited string
     -   Truncates `description` if over 1024 chars
