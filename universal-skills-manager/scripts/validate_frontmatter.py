@@ -311,8 +311,12 @@ def validate(data: dict) -> list:
     if desc:
         if not isinstance(desc, str):
             issues.append({"level": "error", "field": "description", "message": f"'description' must be a string, got {type(desc).__name__}"})
-        elif len(desc) > DESCRIPTION_MAX_LENGTH:
-            issues.append({"level": "error", "field": "description", "message": f"'description' exceeds {DESCRIPTION_MAX_LENGTH} chars (got {len(desc)})"})
+        else:
+            if len(desc) > DESCRIPTION_MAX_LENGTH:
+                issues.append({"level": "error", "field": "description", "message": f"'description' exceeds {DESCRIPTION_MAX_LENGTH} chars (got {len(desc)})"})
+            # Anthropic's quick_validate.py rejects angle brackets in description
+            if '<' in desc or '>' in desc:
+                issues.append({"level": "error", "field": "description", "message": "Description cannot contain angle brackets (< or >)"})
 
     # Validate compatibility
     compat = data.get("compatibility")
@@ -425,6 +429,10 @@ def fix_frontmatter(data: dict) -> dict:
         # Collapse multi-line to single line (replace newlines with spaces, collapse whitespace)
         desc = re.sub(r"\s*\n\s*", " ", desc).strip()
         fixed["description"] = desc
+
+    # Strip angle brackets from description (Anthropic's validator rejects them)
+    if "description" in fixed and isinstance(fixed["description"], str):
+        fixed["description"] = fixed["description"].replace("<", "").replace(">", "")
 
     # Truncate description if too long
     if "description" in fixed and isinstance(fixed["description"], str):

@@ -410,14 +410,14 @@ This skill (Universal Skills Manager) requires network access to call the Skills
     *   Cline uses the same `SKILL.md` format with `name` and `description` frontmatter. The `name` field must match the directory name. No manifest generation required. Note: Cline also reads `.claude/skills/` at the project level, so Claude Code project skills work in Cline automatically.
     *   If OpenCode or Anti-Gravity require a specific manifest (e.g., `manifest.json`), generate a basic one based on the `SKILL.md` frontmatter during installation.
 5.  **claude.ai / Claude Desktop Frontmatter Compatibility Check:**
-    When a user wants to upload or package a skill for **claude.ai** or **Claude Desktop**, validate the SKILL.md frontmatter against the [Agent Skills specification](https://agentskills.io/specification). Claude Desktop's validator is strict and will reject non-compliant skills with "malformed YAML frontmatter" or "unexpected key" errors.
+    When a user wants to upload or package a skill for **claude.ai** or **Claude Desktop**, validate the SKILL.md frontmatter against the [Agent Skills specification](https://agentskills.io/specification). Claude Desktop uses `strictyaml` (not standard PyYAML) which rejects ambiguous YAML constructs like block scalars. It will reject non-compliant skills with "malformed YAML frontmatter" or "unexpected key" errors.
 
     **Allowed top-level frontmatter fields (Agent Skills spec):**
 
     | Field | Required | Constraints |
     | :--- | :--- | :--- |
     | `name` | Yes | Max 64 chars, lowercase letters/numbers/hyphens only, must match directory name |
-    | `description` | Yes | Max 1024 chars |
+    | `description` | Yes | Max 1024 chars. No angle brackets (`<` or `>`). No block scalars (`|` or `>`) — use inline strings only |
     | `license` | No | License name or reference to bundled file |
     | `compatibility` | No | Max 500 chars, environment requirements |
     | `metadata` | No | Flat key-value pairs only (string keys to string values — no nested objects, no arrays) |
@@ -438,7 +438,8 @@ This skill (Universal Skills Manager) requires network access to call the Skills
     -   Moves unsupported top-level keys (e.g., `version`, `author`, `homepage`, `category`) into `metadata` as string values
     -   Flattens nested `metadata` objects (e.g., `metadata.clawdbot.requires.bins: [x, y]` → `metadata.clawdbot-requires-bins: "x, y"`)
     -   Converts non-string metadata values to quoted strings (e.g., `true` → `"true"`)
-    -   Collapses YAML block scalar descriptions (`|` or `>`) to simple inline quoted strings (Claude Desktop's parser rejects block scalars)
+    -   Collapses YAML block scalar descriptions (`|` or `>`) to simple inline quoted strings (Claude Desktop uses `strictyaml` which rejects block scalars)
+    -   Strips angle brackets (`<` `>`) from description (Anthropic's validator rejects them)
     -   Converts YAML list-format `allowed-tools` to space-delimited string
     -   Truncates `description` if over 1024 chars
     -   Validates the fix and reports if any issues remain
