@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.9] - 2026-02-14
+
+### Changed
+- **README cleanup**: Slimmed from 574 to 194 lines. Moved security scanning details, install script usage, API key options, API reference (curl/JSON for all 3 sources), manual cloud packaging, and frontmatter spec to new `docs/TECHNICAL.md`.
+- **Block scalar validation nuanced**: Testing confirmed folded scalars (`>`) work in Claude Desktop. Updated `validate_frontmatter.py`: literal scalars (`|`) with blank lines remain an error, `|` without blank lines is a warning, `>` is a warning only. Previously all block scalars were errors.
+- **Claude Desktop install flow (Step 4a)**: Added to SKILL.md install procedure -- when user targets claude.ai/Desktop, the skill validates frontmatter, notifies user of issues, and only fixes + packages as ZIP with explicit user consent.
+
+### Added
+- **`docs/TECHNICAL.md`**: New technical reference document with all content moved from README.
+
 ## [1.5.8] - 2026-02-14
 
 ### Added
