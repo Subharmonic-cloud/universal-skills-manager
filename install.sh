@@ -156,7 +156,7 @@ check_python() {
 # Tool Detection
 # =============================================================================
 
-# Stores detected tools as "ToolName:skills_path" entries separated by spaces
+# Stores detected tools as "ToolName|skills_path" entries separated by newlines
 DETECTED_TOOLS=""
 DETECTED_COUNT=0
 
@@ -193,7 +193,8 @@ check_tool() {
     skills_dir="$3"
 
     if [ -d "$tool_dir" ]; then
-        DETECTED_TOOLS="${DETECTED_TOOLS}${tool_name}|${skills_dir} "
+        DETECTED_TOOLS="${DETECTED_TOOLS}${tool_name}|${skills_dir}
+"
         DETECTED_COUNT=$((DETECTED_COUNT + 1))
         success "Found: $tool_name"
     fi
@@ -211,10 +212,14 @@ filter_tools() {
     FILTERED=""
     FILTERED_COUNT=0
 
-    # Save and restore IFS
+    # Split comma-separated filter into positional params, then restore IFS
     OLD_IFS="$IFS"
     IFS=','
-    for short_name in $TOOLS_FILTER; do
+    # shellcheck disable=SC2086
+    set -- $TOOLS_FILTER
+    IFS="$OLD_IFS"
+
+    for short_name in "$@"; do
         case "$short_name" in
             claude)       match="Claude Code" ;;
             gemini)       match="Gemini CLI" ;;
@@ -232,15 +237,21 @@ filter_tools() {
                 ;;
         esac
 
+        # Iterate newline-separated DETECTED_TOOLS
+        OLD_IFS="$IFS"
+        IFS='
+'
         for entry in $DETECTED_TOOLS; do
+            [ -z "$entry" ] && continue
             entry_name=$(echo "$entry" | cut -d'|' -f1)
             if [ "$entry_name" = "$match" ]; then
-                FILTERED="${FILTERED}${entry} "
+                FILTERED="${FILTERED}${entry}
+"
                 FILTERED_COUNT=$((FILTERED_COUNT + 1))
             fi
         done
+        IFS="$OLD_IFS"
     done
-    IFS="$OLD_IFS"
 
     if [ "$FILTERED_COUNT" -eq 0 ]; then
         die "None of the specified tools (${TOOLS_FILTER}) were detected on this system."
@@ -322,7 +333,11 @@ install_to_tools() {
     info "Installing Universal Skills Manager..."
     echo ""
 
+    OLD_IFS="$IFS"
+    IFS='
+'
     for entry in $DETECTED_TOOLS; do
+        [ -z "$entry" ] && continue
         tool_name=$(echo "$entry" | cut -d'|' -f1)
         skills_dir=$(echo "$entry" | cut -d'|' -f2)
         dest_dir="${skills_dir}/${SKILL_FOLDER}"
@@ -353,6 +368,7 @@ install_to_tools() {
             FAILED_COUNT=$((FAILED_COUNT + 1))
         fi
     done
+    IFS="$OLD_IFS"
 }
 
 # =============================================================================
@@ -372,19 +388,19 @@ check_api_key() {
     info "Without it, you can still search SkillHub (173k+ skills) and ClawHub (5,700+ versioned skills) — no key needed."
     echo ""
 
-    # Skip prompt if non-interactive (piped input)
-    if [ ! -t 0 ]; then
+    # Skip prompt if no terminal available for user input
+    if ! (exec </dev/tty) 2>/dev/null; then
         info "Non-interactive mode: skipping API key setup."
         info "Set it later: export SKILLSMP_API_KEY=\"your_key\""
         return
     fi
 
     printf "  Would you like to set it up now? [y/N]: "
-    read -r response
+    read -r response </dev/tty
 
     if [ "$response" = "y" ] || [ "$response" = "Y" ]; then
         printf "  Enter your SkillsMP API key: "
-        read -r api_key
+        read -r api_key </dev/tty
 
         if [ -n "$api_key" ]; then
             # Detect shell config file

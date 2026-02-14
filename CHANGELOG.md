@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.5] - 2026-02-14
+
+### Fixed
+- **`install.sh` API key prompt hangs on Enter**: When run via `curl ... | sh`, the `read` command tried to read from the exhausted pipe instead of the terminal. Now reads from `/dev/tty` explicitly, and the non-interactive detection tests `/dev/tty` availability in a subshell instead of checking `stdin`.
+- **`install.sh --tools` flag ignored**: The `--tools claude` filter installed to all detected tools instead of just Claude Code. Root cause: `IFS=','` set for comma-splitting the filter list also prevented the inner loop from splitting newline-separated tool entries, causing the entire tool list to match as one blob. Fixed by splitting the comma list into positional params first, then restoring IFS before iterating tools.
+- **`install.sh` tool names with spaces caused bad word-splitting**: Multi-word tool names like "Claude Code", "Gemini CLI", and "OpenAI Codex" were split into separate tokens when iterating the space-separated tool list (e.g., "Claude" and "Code|/path" as two entries). Switched `DETECTED_TOOLS` from space-separated to newline-separated entries, with proper `IFS` management in all loops.
+
+### Credits
+- Thanks to `@GuyJames` on YouTube for reporting the API key prompt and `--tools` flag bugs.
+
 ## [1.5.4] - 2026-02-13
 
 ### Changed
