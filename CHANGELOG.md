@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`install.sh --tools` flag ignored**: The `--tools claude` filter installed to all detected tools instead of just Claude Code. Root cause: `IFS=','` set for comma-splitting the filter list also prevented the inner loop from splitting newline-separated tool entries, causing the entire tool list to match as one blob. Fixed by splitting the comma list into positional params first, then restoring IFS before iterating tools.
 - **`install.sh` tool names with spaces caused bad word-splitting**: Multi-word tool names like "Claude Code", "Gemini CLI", and "OpenAI Codex" were split into separate tokens when iterating the space-separated tool list (e.g., "Claude" and "Code|/path" as two entries). Switched `DETECTED_TOOLS` from space-separated to newline-separated entries, with proper `IFS` management in all loops.
 
+### Changed
+- **`install.sh` API key validation**: Added prefix validation — keys must start with `sk_live_skillsmp_` (or `sk_test_skillsmp_`). Invalid keys are rejected with an error message instead of being silently saved.
+- **Removed hardcoded skill counts from installer**: Stripped "173k+" and "5,700+" numbers from SkillHub/ClawHub references in installer messages since they go stale quickly.
+- **README**: Added piped one-liner example for single-tool install (`curl ... | sh -s -- --tools codex`).
+
 ### Credits
 - Thanks to `@GuyJames` on YouTube for reporting the API key prompt and `--tools` flag bugs.
 

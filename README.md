@@ -87,9 +87,12 @@ curl -fsSL https://raw.githubusercontent.com/jacob-bd/universal-skills-manager/m
 Or install to specific tools only:
 
 ```bash
-# Download and run with --tools flag
+# Install to Claude Code and Gemini CLI only
 curl -fsSL https://raw.githubusercontent.com/jacob-bd/universal-skills-manager/main/install.sh -o /tmp/install.sh
 sh /tmp/install.sh --tools claude,gemini
+
+# Or pipe directly — install to Codex only
+curl -fsSL https://raw.githubusercontent.com/jacob-bd/universal-skills-manager/main/install.sh | sh -s -- --tools codex
 ```
 
 The installer will:

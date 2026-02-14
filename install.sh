@@ -385,7 +385,7 @@ check_api_key() {
 
     warn "SKILLSMP_API_KEY is not set."
     info "A SkillsMP API key enables curated search with AI semantic matching."
-    info "Without it, you can still search SkillHub (173k+ skills) and ClawHub (5,700+ versioned skills) — no key needed."
+    info "Without it, you can still search SkillHub and ClawHub — no key needed."
     echo ""
 
     # Skip prompt if no terminal available for user input
@@ -402,22 +402,37 @@ check_api_key() {
         printf "  Enter your SkillsMP API key: "
         read -r api_key </dev/tty
 
-        if [ -n "$api_key" ]; then
-            # Detect shell config file
-            if [ -f "$HOME/.zshrc" ]; then
-                SHELL_RC="$HOME/.zshrc"
-            elif [ -f "$HOME/.bashrc" ]; then
-                SHELL_RC="$HOME/.bashrc"
-            else
-                SHELL_RC="$HOME/.profile"
-            fi
-
-            printf "\n# SkillsMP API Key (added by Universal Skills Manager installer)\n" >> "$SHELL_RC"
-            printf "export SKILLSMP_API_KEY=\"%s\"\n" "$api_key" >> "$SHELL_RC"
-
-            success "API key added to $SHELL_RC"
-            info "Run 'source $SHELL_RC' or restart your terminal to activate."
+        if [ -z "$api_key" ]; then
+            warn "No key entered. Skipping API key setup."
+            info "You can set it later: export SKILLSMP_API_KEY=\"your_key\""
+            return
         fi
+
+        # Validate key prefix
+        case "$api_key" in
+            sk_live_skillsmp_*|sk_test_skillsmp_*)
+                ;;
+            *)
+                error "Invalid API key format. SkillsMP keys start with 'sk_live_skillsmp_'"
+                info "Get your key at: https://skillsmp.com"
+                return
+                ;;
+        esac
+
+        # Detect shell config file
+        if [ -f "$HOME/.zshrc" ]; then
+            SHELL_RC="$HOME/.zshrc"
+        elif [ -f "$HOME/.bashrc" ]; then
+            SHELL_RC="$HOME/.bashrc"
+        else
+            SHELL_RC="$HOME/.profile"
+        fi
+
+        printf "\n# SkillsMP API Key (added by Universal Skills Manager installer)\n" >> "$SHELL_RC"
+        printf "export SKILLSMP_API_KEY=\"%s\"\n" "$api_key" >> "$SHELL_RC"
+
+        success "API key added to $SHELL_RC"
+        info "Run 'source $SHELL_RC' or restart your terminal to activate."
     else
         info "You can set it later:"
         info "  export SKILLSMP_API_KEY=\"your_key\""
@@ -449,7 +464,7 @@ show_summary() {
     if [ -z "${SKILLSMP_API_KEY:-}" ]; then
         echo "  ${YELLOW}Tip:${RESET} Set SKILLSMP_API_KEY for curated SkillsMP search (optional)."
         echo "  Get one at: https://skillsmp.com"
-        echo "  SkillHub (173k+ skills) and ClawHub (5,700+ versioned skills) work without a key."
+        echo "  SkillHub and ClawHub search work without a key."
         echo ""
     fi
     echo "  Docs: https://github.com/jacob-bd/universal-skills-manager"
