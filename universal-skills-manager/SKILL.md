@@ -4,12 +4,8 @@ description: "The master coordinator for AI skills. Discovers skills from multip
 metadata:
   homepage: https://github.com/jacob-bd/universal-skills-manager
   disable-model-invocation: true
-  clawdbot:
-    requires:
-      bins:
-        - python3
-        - curl
-    primaryEnv: SKILLSMP_API_KEY
+  requires-bins: "python3, curl"
+  primaryEnv: SKILLSMP_API_KEY
 ---
 
 <!-- Version: 1.5.5 -->
