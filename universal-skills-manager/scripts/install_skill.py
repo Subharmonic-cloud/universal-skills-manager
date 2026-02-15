@@ -31,7 +31,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 
 
 # =============================================================================
@@ -506,8 +506,14 @@ def display_skill_diff(diff: dict, dest: Path, force: bool) -> bool:
         print("  (--force specified, proceeding without prompt)")
         return True
     
-    response = input("\nProceed with update? [y/N]: ")
-    return response.lower() == 'y'
+    try:
+        if not sys.stdin.isatty():
+            raise EOFError
+        response = input("\nProceed with update? [y/N]: ")
+        return response.lower() == 'y'
+    except EOFError:
+        print("\n  Non-interactive mode: update requires --force to proceed.")
+        return False
 
 
 # =============================================================================
@@ -863,8 +869,14 @@ def run_security_scan(skill_dir: Path, force: bool = False) -> bool:
         print("\n  Note: --force specified, proceeding despite security findings")
         return True
 
-    response = input("\nProceed with installation? [y/N]: ")
-    return response.lower() == 'y'
+    try:
+        if not sys.stdin.isatty():
+            raise EOFError
+        response = input("\nProceed with installation? [y/N]: ")
+        return response.lower() == 'y'
+    except EOFError:
+        print("\n  Non-interactive mode: use --force to proceed despite security findings.")
+        return False
 
 
 # =============================================================================

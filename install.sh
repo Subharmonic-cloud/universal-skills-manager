@@ -432,7 +432,25 @@ check_api_key() {
         printf "export SKILLSMP_API_KEY=\"%s\"\n" "$api_key" >> "$SHELL_RC"
 
         success "API key added to $SHELL_RC"
-        info "Run 'source $SHELL_RC' or restart your terminal to activate."
+
+        # Also write to config.json in each installed location for immediate availability
+        # (env var won't be active until terminal restart, but config.json works right away)
+        OLD_IFS="$IFS"
+        IFS='
+'
+        for entry in $DETECTED_TOOLS; do
+            [ -z "$entry" ] && continue
+            skills_dir=$(echo "$entry" | cut -d'|' -f2)
+            config_file="${skills_dir}/${SKILL_FOLDER}/config.json"
+            if [ -d "${skills_dir}/${SKILL_FOLDER}" ]; then
+                printf '{\n  "skillsmp_api_key": "%s"\n}\n' "$api_key" > "$config_file"
+            fi
+        done
+        IFS="$OLD_IFS"
+
+        success "API key saved to config.json in all installed locations"
+        info "Run 'source $SHELL_RC' or restart your terminal to activate the env variable."
+        info "The key is also available immediately via config.json (no restart needed)."
     else
         info "You can set it later:"
         info "  export SKILLSMP_API_KEY=\"your_key\""

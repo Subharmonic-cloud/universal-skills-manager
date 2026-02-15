@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-02-14
+
+### Fixed
+- **`install_skill.py` crashes in non-interactive environments (Claude Code)**: Both `input()` calls in `run_security_scan` and `display_skill_diff` threw `EOFError` when run from Claude Code (no TTY/stdin). Now detects non-interactive mode via `sys.stdin.isatty()`, prints all findings/diffs to stdout so the agent can read them, and defaults to safe abort with a message suggesting `--force` to bypass. `install_skill.py` bumped to v1.3.0.
+- **API key not available after install in same session**: Installer saved `SKILLSMP_API_KEY` to shell profile (`~/.zshrc`) but not to `config.json`. Since Claude Code's running process doesn't pick up new env vars until restart, the skill would re-prompt for the API key. Installer now also writes the key to `config.json` in every installed location for immediate availability via the config file fallback path.
+
 ## [1.5.9] - 2026-02-14
 
 ### Changed
