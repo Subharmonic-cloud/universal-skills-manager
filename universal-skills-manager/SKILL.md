@@ -140,6 +140,7 @@ This skill (Universal Skills Manager) requires network access to call the Skills
     *   **Scan:** Check if other supported tools are installed on the system (look for their config folders)
     *   **Propose:** "I see you also have OpenCode and Cursor installed. Do you want to sync this skill to them as well?"
 6.  **Execute:**
+    *   For each target location, ensure the parent directory exists: `mkdir -p {target-skills-dir}`
     *   Run the install script for each target location
     *   Ensure the standard structure is maintained
 7.  **Report Success:**
@@ -201,29 +202,33 @@ This skill (Universal Skills Manager) requires network access to call the Skills
     -   **Choose method:**
         -   **Keyword Search** (`/api/v1/skills/search`): For specific terms, exact matches
         -   **AI Semantic Search** (`/api/v1/skills/ai-search`): For natural language queries (e.g., "help me debug code")
-    -   **IMPORTANT:** Always capture the API key into a local variable first, then use it. Direct `$SKILLSMP_API_KEY` expansion in curl can fail in some shell contexts:
+    -   **IMPORTANT:** Always capture the API key into a local variable first, then use it. Direct `$SKILLSMP_API_KEY` expansion in curl can fail in some shell contexts.
+    -   **IMPORTANT:** Always include a `User-Agent` header. SkillsMP is behind Cloudflare, which blocks bare curl requests (403 Forbidden).
         ```bash
         # Step 1: Capture key (do this once per session)
         API_KEY=$(printenv SKILLSMP_API_KEY)
 
-        # Step 2: Use ${API_KEY} in curl commands
+        # Step 2: Use ${API_KEY} in curl commands (User-Agent required)
         # Keyword Search
         curl -X GET "https://skillsmp.com/api/v1/skills/search?q={query}&limit=20&sortBy=recent" \
-          -H "Authorization: Bearer ${API_KEY}"
+          -H "Authorization: Bearer ${API_KEY}" \
+          -H "User-Agent: Universal-Skills-Manager"
 
         # AI Semantic Search (for natural language queries)
         curl -X GET "https://skillsmp.com/api/v1/skills/ai-search?q={query}" \
-          -H "Authorization: Bearer ${API_KEY}"
+          -H "Authorization: Bearer ${API_KEY}" \
+          -H "User-Agent: Universal-Skills-Manager"
         ```
     -   **Parse:** Extract from `data.skills[]` (keyword) or `data.data[]` (AI search)
     -   Available fields: `id`, `name`, `author`, `description`, `githubUrl`, `skillUrl`, `stars`, `updatedAt`
-    -   **Note:** SkillsMP requires a `q` parameter — there is no browse/list endpoint. For "top skills" or browsing without a specific query, use SkillHub or ClawHub instead (both support browsing by stars/downloads).
+    -   **Note:** SkillsMP requires a `q` parameter — there is no browse/list endpoint. However, `q=*` works as a wildcard to surface top skills (combine with `sortBy=stars` for popularity). For dedicated browsing, use SkillHub or ClawHub instead (both support browsing by stars/downloads).
 
     **If using SkillHub (open catalog, no auth):**
     -   **Execute:**
         ```bash
         # SkillHub Search (no authentication required)
-        curl -X GET "https://skills.palebluedot.live/api/skills?q={query}&limit=20"
+        curl -X GET "https://skills.palebluedot.live/api/skills?q={query}&limit=20" \
+          -H "User-Agent: Universal-Skills-Manager"
         ```
     -   **Parse:** Extract from `skills[]` array
     -   Available fields: `id`, `name`, `description`, `githubOwner`, `githubRepo`, `githubStars`, `downloadCount`, `securityScore`
@@ -236,10 +241,13 @@ This skill (Universal Skills Manager) requires network access to call the Skills
     -   **Execute:**
         ```bash
         # Semantic Search (vector/similarity search)
-        curl -X GET "https://clawhub.ai/api/v1/search?q={query}&limit=20"
+        curl -X GET "https://clawhub.ai/api/v1/search?q={query}&limit=20" \
+          -H "User-Agent: Universal-Skills-Manager"
 
-        # Browse by stars or downloads
-        curl -X GET "https://clawhub.ai/api/v1/skills?limit=20&sort=stars"
+        # Browse by stars, downloads, or trending
+        curl -X GET "https://clawhub.ai/api/v1/skills?limit=20&sort=stars" \
+          -H "User-Agent: Universal-Skills-Manager"
+        # Other sort options: sort=downloads, sort=trending, sort=updated
         ```
     -   **Parse:**
         -   Semantic search: Extract from `results[]` array — each has `score`, `slug`, `displayName`, `summary`, `version`, `updatedAt`
@@ -434,14 +442,15 @@ This skill (Universal Skills Manager) requires network access to call the Skills
 
 ## Operational Rules
 
-1.  **Structure Integrity:** When installing, always ensure the skill has its own folder (e.g., `.../skills/my-skill/`). Do not dump loose files into the root skills directory.
+1.  **Structure Integrity:** When installing, always ensure the skill has its own folder (e.g., `.../skills/my-skill/`). Do not dump loose files into the root skills directory. Always run `mkdir -p` on the target path before copying files.
 2.  **Conflict Safety:** If a skill already exists at a target location, **always** ask before overwriting, unless the user explicitly requested a "Force Sync."
-3.  **OpenClaw Note:** OpenClaw may require a restart to pick up new skills if `skills.load.watch` is not enabled in `openclaw.json`. Warn the user of this after installation.
-4.  **Cross-Platform Adaptation:**
+3.  **User-Agent Required:** Always include `-H "User-Agent: Universal-Skills-Manager"` in all curl requests. APIs behind Cloudflare (like SkillsMP) return 403 Forbidden for bare curl requests without a User-Agent header.
+4.  **OpenClaw Note:** OpenClaw may require a restart to pick up new skills if `skills.load.watch` is not enabled in `openclaw.json`. Warn the user of this after installation.
+5.  **Cross-Platform Adaptation:**
     *   Gemini uses `SKILL.md`.
     *   Cline uses the same `SKILL.md` format with `name` and `description` frontmatter. The `name` field must match the directory name. No manifest generation required. Note: Cline also reads `.claude/skills/` at the project level, so Claude Code project skills work in Cline automatically.
     *   If OpenCode or Anti-Gravity require a specific manifest (e.g., `manifest.json`), generate a basic one based on the `SKILL.md` frontmatter during installation.
-5.  **claude.ai / Claude Desktop Frontmatter Compatibility Check:**
+6.  **claude.ai / Claude Desktop Frontmatter Compatibility Check:**
     When a user wants to upload or package a skill for **claude.ai** or **Claude Desktop**, validate the SKILL.md frontmatter against the [Agent Skills specification](https://agentskills.io/specification). Claude Desktop uses `strictyaml` (not standard PyYAML) which rejects ambiguous YAML constructs like block scalars. It will reject non-compliant skills with "malformed YAML frontmatter" or "unexpected key" errors.
 
     **Allowed top-level frontmatter fields (Agent Skills spec):**
@@ -564,6 +573,7 @@ ClawHub hosts skill files directly (not on GitHub), so the install flow bypasses
     -   Use ClawHub's file endpoint to get the raw SKILL.md:
         ```bash
         curl -s "https://clawhub.ai/api/v1/skills/{slug}/file?path=SKILL.md" \
+          -H "User-Agent: Universal-Skills-Manager" \
           -o /tmp/clawhub-{slug}/SKILL.md
         ```
     -   **IMPORTANT:** This endpoint returns raw `text/plain` content, NOT JSON. Save the response body directly as the file.
@@ -573,6 +583,7 @@ ClawHub hosts skill files directly (not on GitHub), so the install flow bypasses
     -   If the skill has additional files (scripts, configs), use ClawHub's download endpoint:
         ```bash
         curl -s "https://clawhub.ai/api/v1/download?slug={slug}" \
+          -H "User-Agent: Universal-Skills-Manager" \
           -o /tmp/clawhub-{slug}.zip
         unzip -o /tmp/clawhub-{slug}.zip -d /tmp/clawhub-{slug}/
         ```

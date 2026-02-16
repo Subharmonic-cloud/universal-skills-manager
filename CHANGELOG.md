@@ -10,6 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **`install_skill.py` crashes in non-interactive environments (Claude Code)**: Both `input()` calls in `run_security_scan` and `display_skill_diff` threw `EOFError` when run from Claude Code (no TTY/stdin). Now detects non-interactive mode via `sys.stdin.isatty()`, prints all findings/diffs to stdout so the agent can read them, and defaults to safe abort with a message suggesting `--force` to bypass. `install_skill.py` bumped to v1.3.0.
 - **API key not available after install in same session**: Installer saved `SKILLSMP_API_KEY` to shell profile (`~/.zshrc`) but not to `config.json`. Since Claude Code's running process doesn't pick up new env vars until restart, the skill would re-prompt for the API key. Installer now also writes the key to `config.json` in every installed location for immediate availability via the config file fallback path.
+- **Cloudflare 403 on SkillsMP API calls**: All curl examples lacked a `User-Agent` header. SkillsMP is behind Cloudflare, which blocks bare curl requests as bot traffic. Added `User-Agent: Universal-Skills-Manager` header to all curl examples in SKILL.md and docs/TECHNICAL.md. Added new Operational Rule 3 requiring User-Agent on all API requests.
+
+### Added
+- **`q=*` wildcard for SkillsMP**: Documented that `q=*` works as a wildcard query to surface top skills when combined with `sortBy=stars`, useful for "show me popular skills" requests.
+- **ClawHub sort options**: Documented `sort=downloads`, `sort=trending`, and `sort=updated` alongside existing `sort=stars`.
+- **`mkdir -p` safety**: Added explicit directory creation step to install flow Step 6 (Execute) and Operational Rule 1 (Structure Integrity) to prevent silent failures when target parent directories don't exist.
+
+### Credits
+- Thanks to Jackie and the OpenClaw AI agent for field-testing the skill and reporting the Cloudflare 403, wildcard search, sort options, and mkdir safety issues.
 
 ## [1.5.9] - 2026-02-14
 

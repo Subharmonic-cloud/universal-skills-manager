@@ -134,7 +134,8 @@ Restart your terminal for changes to take effect.
 echo $SKILLSMP_API_KEY
 
 curl -X GET "https://skillsmp.com/api/v1/skills/search?q=test&limit=1" \
-  -H "Authorization: Bearer $SKILLSMP_API_KEY"
+  -H "Authorization: Bearer $SKILLSMP_API_KEY" \
+  -H "User-Agent: Universal-Skills-Manager"
 ```
 
 If configured correctly, you should see a JSON response with skill data.
@@ -143,18 +144,29 @@ If configured correctly, you should see a JSON response with skill data.
 
 ## API Reference
 
+> **Note:** Always include a `User-Agent` header in all API requests. SkillsMP is behind Cloudflare and returns 403 Forbidden for bare curl requests.
+
 ### SkillsMP (Curated, API Key Required)
 
 **Keyword Search**
 ```bash
 curl -X GET "https://skillsmp.com/api/v1/skills/search?q=debugging&limit=20&sortBy=recent" \
-  -H "Authorization: Bearer $SKILLSMP_API_KEY"
+  -H "Authorization: Bearer $SKILLSMP_API_KEY" \
+  -H "User-Agent: Universal-Skills-Manager"
 ```
 
 **AI Semantic Search**
 ```bash
 curl -X GET "https://skillsmp.com/api/v1/skills/ai-search?q=help+me+debug+code" \
-  -H "Authorization: Bearer $SKILLSMP_API_KEY"
+  -H "Authorization: Bearer $SKILLSMP_API_KEY" \
+  -H "User-Agent: Universal-Skills-Manager"
+```
+
+**Wildcard / Top Skills** (use `q=*` with `sortBy=stars` when no specific query):
+```bash
+curl -X GET "https://skillsmp.com/api/v1/skills/search?q=*&limit=20&sortBy=stars" \
+  -H "Authorization: Bearer $SKILLSMP_API_KEY" \
+  -H "User-Agent: Universal-Skills-Manager"
 ```
 
 **Response Format:**
@@ -181,12 +193,14 @@ curl -X GET "https://skillsmp.com/api/v1/skills/ai-search?q=help+me+debug+code" 
 
 **Search Skills**
 ```bash
-curl -X GET "https://skills.palebluedot.live/api/skills?q=debugging&limit=20"
+curl -X GET "https://skills.palebluedot.live/api/skills?q=debugging&limit=20" \
+  -H "User-Agent: Universal-Skills-Manager"
 ```
 
 **Get Skill Details (required before install)**
 ```bash
-curl -X GET "https://skills.palebluedot.live/api/skills/{id}"
+curl -X GET "https://skills.palebluedot.live/api/skills/{id}" \
+  -H "User-Agent: Universal-Skills-Manager"
 ```
 
 **Response Format (Search):**
@@ -211,22 +225,26 @@ curl -X GET "https://skills.palebluedot.live/api/skills/{id}"
 
 **Semantic Search**
 ```bash
-curl -X GET "https://clawhub.ai/api/v1/search?q=debugging&limit=20"
+curl -X GET "https://clawhub.ai/api/v1/search?q=debugging&limit=20" \
+  -H "User-Agent: Universal-Skills-Manager"
 ```
 
-**Browse by Stars**
+**Browse by Stars** (also supports `sort=downloads`, `sort=trending`, `sort=updated`)
 ```bash
-curl -X GET "https://clawhub.ai/api/v1/skills?limit=20&sort=stars"
+curl -X GET "https://clawhub.ai/api/v1/skills?limit=20&sort=stars" \
+  -H "User-Agent: Universal-Skills-Manager"
 ```
 
 **Get Skill Details**
 ```bash
-curl -X GET "https://clawhub.ai/api/v1/skills/{slug}"
+curl -X GET "https://clawhub.ai/api/v1/skills/{slug}" \
+  -H "User-Agent: Universal-Skills-Manager"
 ```
 
 **Get Skill File (raw text, NOT JSON)**
 ```bash
-curl -X GET "https://clawhub.ai/api/v1/skills/{slug}/file?path=SKILL.md"
+curl -X GET "https://clawhub.ai/api/v1/skills/{slug}/file?path=SKILL.md" \
+  -H "User-Agent: Universal-Skills-Manager"
 ```
 
 **Response Format (Search):**
