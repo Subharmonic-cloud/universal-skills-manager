@@ -21,6 +21,23 @@ A centralized skill manager for AI coding assistants. Discovers, installs, and s
 
 ## Demo
 
+**Latest Overview (v1.6.0)**
+
+<p align="center">
+  <a href="https://youtu.be/-6QdwLFR_a0">
+    <img src="https://img.youtube.com/vi/-6QdwLFR_a0/0.jpg" alt="Universal Skills Manager Latest Overview" width="100%">
+  </a>
+</p>
+
+This video covers:
+- Security scanning at install time
+- Claude Desktop ZIP packaging and frontmatter compatibility
+- And more
+
+---
+
+**Original Demo**
+
 <p align="center">
   <a href="https://youtu.be/PnOD9pJCk1U">
     <img src="https://img.youtube.com/vi/PnOD9pJCk1U/0.jpg" alt="Universal Skills Manager Demo" width="100%">
