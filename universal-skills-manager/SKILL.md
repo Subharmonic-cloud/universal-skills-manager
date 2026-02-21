@@ -1,6 +1,6 @@
 ---
 name: universal-skills-manager
-description: "The master coordinator for AI skills. Discovers skills from multiple sources (SkillsMP.com, SkillHub, and ClawHub), manages installation, and synchronization across Claude Code, Gemini CLI, Google Anti-Gravity, OpenCode, and other AI tools. Handles User-level (Global) and Project-level (Local) scopes."
+description: "The master coordinator for AI skills. Discovers skills from multiple sources (SkillsMP.com, SkillHub, and ClawHub), manages installation, and synchronization across Claude Code, Gemini CLI, Google Anti-Gravity, OpenCode, Amp CLI, Kilo Code CLI, and other AI tools. Handles User-level (Global) and Project-level (Local) scopes."
 compatibility: "Requires python3, curl, and network access to skillsmp.com, skills.palebluedot.live, clawhub.ai, and github.com"
 metadata:
   homepage: https://github.com/jacob-bd/universal-skills-manager
@@ -13,7 +13,7 @@ metadata:
 
 # Universal Skills Manager
 
-This skill empowers the agent to act as a centralized skill manager for AI capabilities. It discovers skills from multiple sources — SkillsMP.com (curated, AI semantic search), SkillHub (community skills, no API key required), and ClawHub (versioned skills, semantic search, no API key required) — and unifies skill management across multiple AI tools (Claude Code, Gemini, Anti-Gravity, OpenCode, Cline, Cursor, etc.), ensuring consistency and synchronization.
+This skill empowers the agent to act as a centralized skill manager for AI capabilities. It discovers skills from multiple sources — SkillsMP.com (curated, AI semantic search), SkillHub (community skills, no API key required), and ClawHub (versioned skills, semantic search, no API key required) — and unifies skill management across multiple AI tools (Claude Code, Gemini, Anti-Gravity, OpenCode, Amp CLI, Kilo Code, Cline, Cursor, etc.), ensuring consistency and synchronization.
 
 ## When to Use This Skill
 
@@ -41,6 +41,8 @@ This skill manages the following tools and scopes. Always verify these paths exi
 | **Roo Code** | `~/.roo/skills/` | `./.roo/skills/` |
 | **Cursor** | `~/.cursor/skills/` | `./.cursor/skills/` |
 | **Cline** | `~/.cline/skills/` | `./.cline/skills/` |
+| **Amp CLI** | `~/.amp/skills/` | `./.amp/skills/` |
+| **Kilo Code CLI** | `~/.config/kilo/skills/` | `./.config/kilo/skills/` |
 
 **claude.ai / Claude Desktop (ZIP Upload Required):**
 
@@ -309,12 +311,14 @@ This skill (Universal Skills Manager) requires network access to call the Skills
     ls -d ~/.roo/skills 2>/dev/null && echo "Roo: ✓"
     ls -d ~/.config/goose/skills 2>/dev/null && echo "Goose: ✓"
     ls -d ~/.cline/skills 2>/dev/null && echo "Cline: ✓"
+    ls -d ~/.amp/skills 2>/dev/null && echo "Amp: ✓"
+    ls -d ~/.config/kilo/skills 2>/dev/null && echo "Kilo Code: ✓"
     ```
 
 2.  **Collect All Skills:**
     For each detected tool, list skill folders:
     ```bash
-    find ~/.{claude,codex,gemini,gemini/antigravity,openclaw/workspace,cursor,config/opencode,config/goose,roo,cline}/skills -maxdepth 1 -type d 2>/dev/null | \
+    find ~/.{claude,codex,gemini,gemini/antigravity,openclaw/workspace,cursor,config/opencode,config/goose,config/kilo,roo,cline}/skills ~/.amp/skills -maxdepth 1 -type d 2>/dev/null | \
       xargs -I{} basename {} | sort -u
     ```
 
@@ -449,6 +453,8 @@ This skill (Universal Skills Manager) requires network access to call the Skills
 5.  **Cross-Platform Adaptation:**
     *   Gemini uses `SKILL.md`.
     *   Cline uses the same `SKILL.md` format with `name` and `description` frontmatter. The `name` field must match the directory name. No manifest generation required. Note: Cline also reads `.claude/skills/` at the project level, so Claude Code project skills work in Cline automatically.
+    *   Amp CLI uses `SKILL.md` in `~/.amp/skills/` (global) or `./.amp/skills/` (project). Compatible with the standard `SKILL.md` format. Skills are loaded via the `skill` tool within Amp sessions.
+    *   Kilo Code CLI uses `SKILL.md` in `~/.config/kilo/skills/` (global) or `./.config/kilo/skills/` (project). Compatible with the standard `SKILL.md` format. Kilo Code is a fork of OpenCode and follows the same skill conventions.
     *   If OpenCode or Anti-Gravity require a specific manifest (e.g., `manifest.json`), generate a basic one based on the `SKILL.md` frontmatter during installation.
 6.  **claude.ai / Claude Desktop Frontmatter Compatibility Check:**
     When a user wants to upload or package a skill for **claude.ai** or **Claude Desktop**, validate the SKILL.md frontmatter against the [Agent Skills specification](https://agentskills.io/specification). Claude Desktop uses `strictyaml` (not standard PyYAML) which rejects ambiguous YAML constructs like block scalars. It will reject non-compliant skills with "malformed YAML frontmatter" or "unexpected key" errors.

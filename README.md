@@ -15,9 +15,9 @@
 
 ---
 
-**v1.6.0** · Three-source skill discovery · 10 supported AI tools · Hardened security scanning
+**v1.6.0** · Three-source skill discovery · 12 supported AI tools · Hardened security scanning
 
-A centralized skill manager for AI coding assistants. Discovers, installs, and synchronizes skills from multiple sources — [SkillsMP.com](https://skillsmp.com) (curated, AI semantic search), [SkillHub](https://skills.palebluedot.live) (community skills, no API key required), and [ClawHub](https://clawhub.ai) (versioned skills, semantic search, no API key required) — across multiple AI tools including Claude Code, OpenAI Codex, Gemini CLI, and more.
+A centralized skill manager for AI coding assistants. Discovers, installs, and synchronizes skills from multiple sources — [SkillsMP.com](https://skillsmp.com) (curated, AI semantic search), [SkillHub](https://skills.palebluedot.live) (community skills, no API key required), and [ClawHub](https://clawhub.ai) (versioned skills, semantic search, no API key required) — across multiple AI tools including Claude Code, OpenAI Codex, Gemini CLI, Amp CLI, Kilo Code CLI, and more.
 
 ## Demo
 
@@ -84,7 +84,7 @@ sh /tmp/install.sh --tools claude,gemini
 curl -fsSL https://raw.githubusercontent.com/jacob-bd/universal-skills-manager/main/install.sh | sh -s -- --tools codex
 ```
 
-**Supported `--tools` values:** `claude`, `gemini`, `antigravity`, `opencode`, `openclaw`, `codex`, `goose`, `roo`, `cursor`, `cline`
+**Supported `--tools` values:** `claude`, `gemini`, `antigravity`, `opencode`, `openclaw`, `codex`, `goose`, `roo`, `cursor`, `cline`, `amp`, `kilo`
 
 > **Note:** The installer automatically installs to **all** detected AI tools without prompting for confirmation. If you only want to install to specific tools, use the `--tools` flag to target them explicitly.
 
@@ -132,6 +132,8 @@ Once installed, just ask your AI assistant:
 | **block/goose** | `~/.config/goose/skills/` | `./.goose/agents/` |
 | **Roo Code** | `~/.roo/skills/` | `./.roo/skills/` |
 | **Cline** | `~/.cline/skills/` | `./.cline/skills/` |
+| **Amp CLI** | `~/.amp/skills/` | `./.amp/skills/` |
+| **Kilo Code CLI** | `~/.config/kilo/skills/` | `./.config/kilo/skills/` |
 
 ## claude.ai and Claude Desktop
 
